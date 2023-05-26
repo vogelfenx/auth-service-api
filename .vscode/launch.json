@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: FastAPI",
+            "type": "python",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/fastapi-solution/src",
+            "env": {
+                "db_username": "postgres",
+                "db_password": "secret",
+                "host_server": "localhost",
+                "database_name": "fastapi",
+                "ssl_mode": "prefer",
+                "db_server_port": "5432"
+            },
+            "args": [
+                "main:app",
+                "--reload",
+                "--port",
+                "8008"
+            ]
+        },
+        {
+            "name": "Python: Remote Attach",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/fastapi-solution/src",
+                    "remoteRoot": "/opt/app/src"
+                }
+            ],
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "python.testing.pytestArgs": [
+        "--rootdir", "${workspaceFolder}/fastapi-solution/tests",
+        "--docker-compose=docker-compose.test.yaml",
+        "--docker-compose-no-build",
+        "--use-running-containers",
+        "-v",
+    ],
+    "python.analysis.extraPaths": [
+        "fastapi-solution/src/",
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.formatting.blackArgs": [
+        "--line-length",
+        "79"
+    ]
+}
