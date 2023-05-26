@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from core.config import api_settings
+from api.v1.admin.routes import router as admin_v1
 from api.v1.service.routes import router as service_v1
 
 
@@ -25,6 +26,12 @@ async def shutdown():
 
 
 # Теги указываем для удобства навигации по документации
+app.include_router(
+    service_v1,
+    prefix="/api/v1/admin",
+    tags=["admin"],
+    responses={404: {"description": "Not found"}},
+)
 app.include_router(
     service_v1,
     prefix="/api/v1/service",

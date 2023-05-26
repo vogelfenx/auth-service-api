@@ -20,7 +20,7 @@ services:
       - redis
       - postgres
     volumes:
-      - ./src/:/opt/app/src
+      - ./app/src/:/opt/app/src
     entrypoint:
       [
         "sh",

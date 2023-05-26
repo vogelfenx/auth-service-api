@@ -32,14 +32,11 @@ class ApiSettings(CommonSettings):
     UUID_REGEXP = r"[\w\d]{8}-[\w\d]{4}-[\w\d]{4}-[\w\d]{4}-[\w\d]{12}"
 
 
-class ESSettings(CommonSettings):
-    """Класс с настройками Elasticsearch."""
+class PostgresSettings(CommonSettings):
+    """Класс с настройками Postgres."""
 
-    ELASTIC_HOST: str
-    ELASTIC_PORT: int
-
-    MAX_ELASTIC_QUERY_SIZE = 10000
-    DEFAULT_ELASTIC_QUERY_SIZE = 10
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
 
 
 class RedisSettings(CommonSettings):
@@ -51,5 +48,5 @@ class RedisSettings(CommonSettings):
 
 
 api_settings = ApiSettings()  # type: ignore
-es_conf = ESSettings()  # type: ignore
-redis_conf = RedisSettings()  # type: ignore
+postgres_settings = PostgresSettings()  # type: ignore
+redis_settings = RedisSettings()  # type: ignore
