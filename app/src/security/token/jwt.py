@@ -158,6 +158,6 @@ async def get_current_active_user(
 
 
 async def add_blacklist_token(token):
-    logger.error("This is dummy function")
+    logger.warning("This is dummy function")
 
     return True

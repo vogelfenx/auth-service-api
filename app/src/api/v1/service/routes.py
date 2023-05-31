@@ -10,13 +10,12 @@ from fastapi import (
     Path,
     Query,
     Request,
+    Response,
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from security.token.jwt import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     CREDENTIALS_EXCEPTION,
-    REFRESH_TOKEN_EXPIRE_MINUTES,
     Token,
     User,
     add_blacklist_token,
@@ -28,6 +27,7 @@ from security.token.jwt import (
     get_current_user_token,
 )
 from core.logger import get_logger
+from core.config import security_settings
 
 
 logger = get_logger(__name__)
@@ -59,8 +59,12 @@ async def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(
+        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
+    refresh_token_expires = timedelta(
+        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+    )
 
     access_token = create_token(
         data={"sub": user.username},
@@ -84,7 +88,9 @@ async def update_token(
 ):
     """Return two jwt tokens, if user is registred."""
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(
+        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
     access_token = create_token(
         data={"sub": current_user.username},
         expires_delta=access_token_expires,
@@ -103,7 +109,7 @@ async def logout(token: str = Depends(get_current_user_token)):
     """Logout also delete jwt token."""
 
     # TODO попробовать использовать тут протокол
-    if add_blacklist_token(token):
+    if await add_blacklist_token(token):
         # TODO Переделать на orjson
         return status.HTTP_200_OK
     return status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -111,8 +117,19 @@ async def logout(token: str = Depends(get_current_user_token)):
 
 # TODO добавить ручку change_pass (должен производить логаут)
 # Igor
-@router.put("/user")
-async def edit_user(
+@router.put("/user/password")
+async def change_password(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    psw: Annotated[str, Query(description="User hashed password.")],
+):
+    """Change password for user by id."""
+
+    return {"message": "This is a user editor!"}
+
+
+@router.put("/user/edit")
+async def edit_common_user_info(
+    current_user: Annotated[User, Depends(get_current_active_user)],
     login: Annotated[str, Query(description="A user login.")],
     psw: Annotated[str, Query(description="User hashed password.")],
 ):
@@ -122,48 +139,36 @@ async def edit_user(
 
 
 @router.get("/user/history")
-async def get_user_history():
+async def get_user_history(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
     """Get user history by id and token."""
 
     return {"message": "This is a history!"}
 
 
-##### Test jwt example
-
-
-@router.get("/users/me/", response_model=User)
-async def read_users_me(
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    return current_user
-
-
-@router.get("/users/me/items/")
-async def read_own_items(
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    return [{"item_id": "Foo", "owner": current_user.username}]
-
-
 @router.post("/refresh")
-async def refresh(request: Request):
-    try:
-        req = await request.json()
-        if req.get("grant_type") != "refresh_token":
-            raise ValueError("Not refresh token")
+async def refresh(request: Request, response: Response):
+    refresh_token = request.cookies["refresh_token"]
 
-        token = req.get("refresh_token")
-        payload = decode_token(token)
+    if not refresh_token:
+        raise ValueError("No refresh token")
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_token(
-            data={"sub": payload.get("sub")},
-            expires_delta=access_token_expires,
-        )
+    payload = decode_token(refresh_token)
 
-        logger.debug("refresh_token: {0}".format(token))
-        logger.debug("access_token: {0}".format(access_token))
-        return {"access_token": access_token, "token_type": "bearer"}
+    access_token_expires = timedelta(
+        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
+    access_token = create_token(
+        data={"sub": payload.get("sub")},
+        expires_delta=access_token_expires,
+    )
 
-    except Exception as e:
-        raise CREDENTIALS_EXCEPTION
+    logger.debug("refresh_token: {0}".format(refresh_token))
+    logger.debug("access_token: {0}".format(access_token))
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        secure=True,
+    )
