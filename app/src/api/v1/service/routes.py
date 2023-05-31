@@ -1,7 +1,5 @@
 from datetime import timedelta
-from http import HTTPStatus
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -11,6 +9,7 @@ from fastapi import (
     Query,
     Request,
     status,
+    Response,
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from security.token.jwt import (
@@ -48,7 +47,8 @@ async def signin(
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ):
     user = authenticate_user(
         fake_users_db, form_data.username, form_data.password
@@ -70,6 +70,17 @@ async def login_for_access_token(
         data={"sub": user.username},
         expires_delta=refresh_token_expires,
     )
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        secure=True,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        secure=True,
+    )
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
