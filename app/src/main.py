@@ -27,7 +27,7 @@ async def shutdown():
 
 # Теги указываем для удобства навигации по документации
 app.include_router(
-    auth_v1,
+    role_v1,
     prefix="/api/v1/role",
     tags=["role"],
     responses={404: {"description": "Not found"}},
