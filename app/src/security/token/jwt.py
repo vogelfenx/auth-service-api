@@ -7,6 +7,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
+from src.db.storage.auth_db import PgConnector
+
 # to get a string like this run:
 # openssl rand -hex 32
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
@@ -45,12 +47,13 @@ class UserInDB(User):
     hashed_password: str
 
 
+pg = PgConnector()
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/service/token")
 
 app = FastAPI()
-
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -60,12 +63,10 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user(db, username: str | None):
+def get_user(username: str | None):
     if not username:
         raise ValueError("Username must be set")
-    if username in db:
-        user_dict = db[username]
-        return UserInDB(**user_dict)
+    return pg.get_user(username=username)
 
 
 def authenticate_user(fake_db, username: str, password: str):
