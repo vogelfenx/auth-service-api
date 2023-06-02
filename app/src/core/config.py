@@ -47,6 +47,16 @@ class RedisSettings(CommonSettings):
     REDIS_EXPIRE: int = 60 * 5  # 5 min
 
 
+class SecuritySettings(CommonSettings):
+    """Класс с настройками Redis."""
+
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    REFRESH_TOKEN_EXPIRE_MINUTES: int
+
+
 api_settings = ApiSettings()  # type: ignore
 postgres_settings = PostgresSettings()  # type: ignore
 redis_settings = RedisSettings()  # type: ignore
+security_settings = SecuritySettings()  # type: ignore

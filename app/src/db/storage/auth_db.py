@@ -4,21 +4,32 @@
 from sqlalchemy import create_engine, select, update, insert
 from sqlalchemy.orm import Session
 
-from db.storage.models import BaseTable, User, Role, UserProfile, LoginHistory, Permission
+from db.storage.models import (
+    BaseTable,
+    User,
+    Role,
+    UserProfile,
+    LoginHistory,
+    Permission,
+)
 from core.config import postgres_settings as pg_conf
+from security.hasher import Hasher
 
 
 class PgConnector:
-
     def __init__(self) -> None:
-        self.engine = create_engine(f"postgresql+psycopg2://{'app'}:{'123qwe'}@{pg_conf.POSTGRES_HOST}/auth_database")
+        self.engine = create_engine(
+            f"postgresql+psycopg2://{'app'}:{'123qwe'}@{pg_conf.POSTGRES_HOST}/auth_database"
+        )
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
     def get_user(self, username: str) -> User:
-        stmt = select(User).where(User.username == username, User.disabled == False)
+        stmt = select(User).where(
+            User.username == username, User.disabled == False
+        )
         try:
-            return self.session.execute(stmt).all()[0]
+            return self.session.execute(stmt).one()[0]
         except Exception:
             self.session.rollback()
             raise Exception
@@ -26,7 +37,12 @@ class PgConnector:
             self.session.commit()
 
     def get_user_roles(self, username: str) -> list[Role]:
-        stmt = select(Role).join(UserProfile, Role.id == UserProfile.role_id).join(User, User.id == UserProfile.user_id).where(User.username == username)
+        stmt = (
+            select(Role)
+            .join(UserProfile, Role.id == UserProfile.role_id)
+            .join(User, User.id == UserProfile.user_id)
+            .where(User.username == username)
+        )
         try:
             return self.session.execute(stmt).all()
         except Exception:
@@ -36,7 +52,12 @@ class PgConnector:
             self.session.commit()
 
     def get_user_permissions(self, username: str) -> list[Permission]:
-        stmt = select(Permission).join(UserProfile, Permission.id == UserProfile.permission_id).join(User, UserProfile.user_id == User.id).where(User.username == username)
+        stmt = (
+            select(Permission)
+            .join(UserProfile, Permission.id == UserProfile.permission_id)
+            .join(User, UserProfile.user_id == User.id)
+            .where(User.username == username)
+        )
         try:
             return self.session.execute(stmt).all()
         except Exception:
@@ -46,7 +67,11 @@ class PgConnector:
             self.session.commit()
 
     def set_password(self, username: str, h_password: str):
-        stmt = update(User).where(User.username == username).values(hashed_password = h_password)
+        stmt = (
+            update(User)
+            .where(User.username == username)
+            .values(hashed_password=h_password)
+        )
         try:
             self.session.execute(stmt)
         except Exception:
@@ -75,3 +100,23 @@ class PgConnector:
             raise Exception
         else:
             self.session.commit()
+
+    def close(self):
+        self.session.close()
+
+    def user_exists(self) -> bool:
+        # TODO: Реализовать логику
+
+        return False
+
+    def authenticate_user(
+        self,
+        username: str,
+        password: str,
+    ):
+        user = self.get_user(username)
+        if not user:
+            return False
+        if not Hasher.verify_password(password, user.hashed_password):
+            return False
+        return user
