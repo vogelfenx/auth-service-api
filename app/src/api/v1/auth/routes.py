@@ -22,7 +22,6 @@ from security.token.jwt import (
     authenticate_user,
     create_token,
     decode_token,
-    fake_users_db,
     get_current_active_user,
     get_current_user_token,
 )
@@ -51,7 +50,8 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ):
     user = authenticate_user(
-        fake_users_db, form_data.username, form_data.password
+        username=form_data.username,
+        password=form_data.password,
     )
     if not user:
         raise HTTPException(

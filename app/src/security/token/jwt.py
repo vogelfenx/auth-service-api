@@ -13,19 +13,6 @@ from core.logger import get_logger
 from core.config import security_settings
 
 logger = get_logger(__name__)
-# to get a string like this run:
-# openssl rand -hex 32
-
-
-fake_users_db = {
-    "admin": {
-        "username": "admin",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": "$2b$12$nTivOWaQA.nqj0PgApNpqe3h9kkFTGWvvZz496Uosd50IhaoHd3u.",
-        "disabled": False,
-    }
-}
 
 # Error
 CREDENTIALS_EXCEPTION = HTTPException(
@@ -80,8 +67,8 @@ def get_user(username: str | None):
     return pg.get_user(username=username)
 
 
-def authenticate_user(fake_db, username: str, password: str):
-    user = get_user(fake_db, username)
+def authenticate_user(username: str, password: str):
+    user = get_user(username)
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -137,7 +124,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     except JWTError:
         raise credentials_exception
     # TODO возможно стоит не ходить в базу повторно
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
