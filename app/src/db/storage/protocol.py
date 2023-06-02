@@ -2,7 +2,11 @@ import typing
 
 
 class User(typing.Protocol):
-    pass
+    username: str
+    email: str | None = None
+    full_name: str | None = None
+    disabled: bool | None = None
+    hashed_password: str
 
 
 class Role(typing.Protocol):
@@ -30,4 +34,10 @@ class Storage(typing.Protocol):
         ...
 
     def edit_user(self, username: str, **kwargs):
+        ...
+
+    def close(self):
+        ...
+
+    def user_exists(self) -> bool:
         ...

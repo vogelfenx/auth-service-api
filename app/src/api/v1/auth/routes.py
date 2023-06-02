@@ -1,8 +1,10 @@
 from datetime import timedelta
-from http import HTTPStatus
 from typing import Annotated
-from uuid import UUID
 
+from core.config import security_settings
+from core.logger import get_logger
+from db.storage.dependency import get_storage
+from db.storage.protocol import Storage, User
 from fastapi import (
     APIRouter,
     Depends,
@@ -14,42 +16,48 @@ from fastapi import (
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
-from security.token.jwt import (
-    CREDENTIALS_EXCEPTION,
+from security.token import (
     Token,
-    User,
     add_blacklist_token,
-    authenticate_user,
     create_token,
     decode_token,
-    get_current_active_user,
-    get_current_user_token,
+    get_current_username_from_token,
 )
-from core.logger import get_logger
-from core.config import security_settings
-
+from security.hasher import Hasher
+from .models import UserAnnotated
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
 router = APIRouter()
 
 
-# Igor
 @router.post("/signin")
 async def signin(
-    user_id: Annotated[str, Query(description="A user id.")],
-    psw: Annotated[str, Query(description="User password.")],
+    user: UserAnnotated,
+    storage: Storage = Depends(get_storage),
 ):
     """Registration a user."""
 
-    return {"message": "This is signin!"}
+    # TODO: Проверить нет ли существующего пользователя и вернуть ошибку, если есть
+    if storage.user_exists():
+        return status.HTTP_409_CONFLICT
+
+    psw: str = user.password.get_secret_value()
+    hashed_password = Hasher.get_password_hash(password=psw)
+    storage.set_user(
+        **user.dict(exclude={"password"}),
+        hashed_password=hashed_password,
+    )
+
+    return {"message": "The user has been created!"}
 
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    storage: Storage = Depends(get_storage),
 ):
-    user = authenticate_user(
+    user = storage.authenticate_user(
         username=form_data.username,
         password=form_data.password,
     )
@@ -81,31 +89,8 @@ async def login_for_access_token(
     }
 
 
-@router.put("/update", response_model=Token)
-async def update_token(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    current_token: Annotated[User, Depends(get_current_user_token)],
-):
-    """Return two jwt tokens, if user is registred."""
-
-    access_token_expires = timedelta(
-        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-    )
-    access_token = create_token(
-        data={"sub": current_user.username},
-        expires_delta=access_token_expires,
-    )
-
-    # TODO: старый токен следует записать в cache
-
-    logger.debug("old_token: {0}".format(current_token))
-    logger.debug("new_token: {0}".format(access_token))
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
 @router.get("/logout")
-async def logout(token: str = Depends(get_current_user_token)):
+async def logout(token: str = Depends(get_current_username_from_token)):
     """Logout also delete jwt token."""
 
     # TODO попробовать использовать тут протокол
@@ -119,7 +104,7 @@ async def logout(token: str = Depends(get_current_user_token)):
 # Igor
 @router.put("/user/password")
 async def change_password(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: Annotated[User, Depends(get_current_username_from_token)],
     psw: Annotated[str, Query(description="User hashed password.")],
 ):
     """Change password for user by id."""
@@ -129,7 +114,7 @@ async def change_password(
 
 @router.put("/user/edit")
 async def edit_common_user_info(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: Annotated[User, Depends(get_current_username_from_token)],
     login: Annotated[str, Query(description="A user login.")],
     psw: Annotated[str, Query(description="User hashed password.")],
 ):
@@ -140,7 +125,7 @@ async def edit_common_user_info(
 
 @router.get("/user/history")
 async def get_user_history(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: Annotated[User, Depends(get_current_username_from_token)],
 ):
     """Get user history by id and token."""
 

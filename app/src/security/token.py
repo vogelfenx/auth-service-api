@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 from typing import Annotated
+from functools import lru_cache
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import BaseModel
+from db.storage.dependency import get_storage
+from db.storage.protocol import Storage, User
 
 from src.db.storage.auth_db import PgConnector
 
@@ -32,51 +34,13 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-# should be ORM
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
-
-
-class UserInDB(User):
-    hashed_password: str
-
-
-pg = PgConnector()
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/service/token")
 
-app = FastAPI()
 
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def get_user(username: str | None):
-    if not username:
-        raise ValueError("Username must be set")
-    return pg.get_user(username=username)
-
-
-def authenticate_user(username: str, password: str):
-    user = get_user(username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
-
-
-def create_token(data: dict, expires_delta: timedelta | None = None):
+def create_token(
+    data: dict,
+    expires_delta: timedelta | None = None,
+):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -109,7 +73,9 @@ def decode_token(token: str):
     return payload
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_username_from_token(
+    token: Annotated[str, Depends(oauth2_scheme)]
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -123,25 +89,14 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    # TODO возможно стоит не ходить в базу повторно
-    user = get_user(username=token_data.username)
-    if user is None:
-        raise credentials_exception
-    return user
+
+    return token_data.username
 
 
 async def get_current_user_token(
     token: Annotated[str, Depends(oauth2_scheme)]
 ):
     return token
-
-
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)]
-):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
 
 
 async def add_blacklist_token(token):
