@@ -71,6 +71,8 @@ LOGGING = {
 }
 
 
-def get_logger(name: str):
+def get_logger(name: str, logging_level: int | str = logging.INFO):
     """Return default logger."""
-    return logging.getLogger(name)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging_level)
+    return logger
