@@ -1,20 +1,37 @@
-from http import HTTPStatus
+from logging import DEBUG, INFO
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
+from core.logger import get_logger
+
+from .models import Role
+from .service import RoleService, get_role_service
+
+logger = get_logger(__name__, DEBUG)
+
 router = APIRouter()
 
 
 @router.post(
-    "/role",
+    "/",
     status_code=status.HTTP_200_OK,
 )
-async def create_role():
-    """Create a role by id."""
+async def create_role(
+    role: Role,
+    role_service: RoleService = Depends(get_role_service),
+) -> dict[str, UUID]:
+    """Create a new role."""
 
-    return {"message": "This is create role entrypoint!"}
+    try:
+        created_role = role_service.create_role(role=role)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return {'uuid': created_role.id}
 
 
 @router.delete("/role/{role_id}")

@@ -3,6 +3,8 @@
 
 from sqlalchemy import create_engine, select, update, insert
 from sqlalchemy.orm import Session
+from db.storage import protocol
+from logging import DEBUG
 
 from db.storage.models import (
     BaseTable,
@@ -13,7 +15,10 @@ from db.storage.models import (
     Permission,
 )
 from core.config import postgres_settings as pg_conf
+from core.logger import get_logger
 from security.hasher import Hasher
+
+logger = get_logger(__name__, DEBUG)
 
 
 class PgConnector:
@@ -23,6 +28,8 @@ class PgConnector:
         )
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
+
+        self.role_connector = RoleConnector(self.session)
 
     def get_user(self, username: str) -> User:
         stmt = select(User).where(
@@ -120,3 +127,26 @@ class PgConnector:
         if not Hasher.verify_password(password, user.hashed_password):
             return False
         return user
+
+
+class RoleConnector(protocol.RoleStorage):
+    def __init__(self, session) -> None:
+        self.session = session
+
+    def create_role(self, **kwargs) -> Role:
+        """Create a new role."""
+        logger.debug(f"Insert role: {kwargs}")
+
+        created_role = None
+        stmt = insert(Role).values(kwargs).returning(Role)
+        try:
+            created_role = self.session.execute(stmt).fetchone()[0]
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"The role was inserted successfully: {created_role}")
+
+        return created_role

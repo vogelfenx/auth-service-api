@@ -10,7 +10,7 @@ class User(typing.Protocol):
 
 
 class Role(typing.Protocol):
-    pass
+    """Role protocol representation."""
 
 
 class Permission(typing.Protocol):
@@ -40,4 +40,9 @@ class Storage(typing.Protocol):
         ...
 
     def user_exists(self) -> bool:
+        ...
+
+
+class RoleStorage(typing.Protocol):
+    def create_role(self) -> Role:
         ...
