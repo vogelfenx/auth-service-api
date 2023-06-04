@@ -51,8 +51,8 @@ class Role(BaseTable):
     __tablename__ = "role"
 
     role: Mapped[str]
-    disabled = Mapped[bool]
-    description = Mapped[Optional[str]]
+    disabled: Mapped[bool]
+    description: Mapped[Optional[str]]
 
     roles_participant: Mapped[List["UserProfile"]] = relationship()
 
