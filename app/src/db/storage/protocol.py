@@ -46,3 +46,6 @@ class Storage(typing.Protocol):
 class RoleStorage(typing.Protocol):
     def create_role(self) -> Role:
         ...
+
+    def delete_role(self, id) -> None:
+        ...

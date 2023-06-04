@@ -1,7 +1,7 @@
 # В этом модуле предполагается реализовать модель хранения данных сервиса auth_api
 # TODO: в будущем добавить абстрактные классы
 
-from sqlalchemy import create_engine, select, update, insert
+from sqlalchemy import create_engine, select, update, insert, delete
 from sqlalchemy.orm import Session
 from db.storage import protocol
 from logging import DEBUG
@@ -150,3 +150,18 @@ class RoleConnector(protocol.RoleStorage):
             logger.debug(f"The role was inserted successfully: {created_role}")
 
         return created_role
+
+    def delete_role(self, id) -> None:
+        """Delete role by id."""
+        logger.debug(f"Delete role with id: {id}")
+
+        stmt = delete(Role).where(Role.id == id)
+        try:
+            self.session.execute(stmt)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"Role with id {id} deleted successfully")

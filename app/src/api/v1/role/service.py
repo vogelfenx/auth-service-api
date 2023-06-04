@@ -21,6 +21,10 @@ class RoleService:
         role = self.storage.role_connector.create_role(**role.dict())
         return role
 
+    def delete_role_by_id(self, role_id) -> None:
+        """Delete a role by id."""
+        self.storage.role_connector.delete_role(id=role_id)
+
 
 def get_role_service(
     storage: PgConnector = Depends(get_storage),

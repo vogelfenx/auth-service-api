@@ -35,10 +35,18 @@ async def create_role(
 
 
 @router.delete("/role/{role_id}")
-async def delete_role():
+async def delete_role(
+    role_id: Annotated[UUID, Path(description="ID of the role to delete")],
+    role_service: RoleService = Depends(get_role_service),
+) -> None:
     """Delete a role by id."""
 
-    return {"message": "This is delete role entrypoint!"}
+    try:
+        role_service.delete_role_by_id(role_id=role_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @router.put("/role/{role_id}")
