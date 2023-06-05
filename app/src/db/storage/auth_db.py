@@ -180,3 +180,17 @@ class RoleConnector(protocol.RoleStorage):
         else:
             self.session.commit()
             logger.debug(f"Role with id {id} edited successfully")
+
+    def fetch_roles(self) -> list[Role]:
+        """Fetch all roles."""
+        logger.debug("Fetch all roles")
+
+        stmt = select(Role)
+        try:
+            result = self.session.execute(stmt)
+            roles = result.scalars().all()
+        except Exception as e:
+            logger.error(e)
+            raise e
+
+        return roles

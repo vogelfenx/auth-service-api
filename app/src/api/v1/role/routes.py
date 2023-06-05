@@ -64,11 +64,11 @@ async def edit_role(
         )
 
 
-@router.get("/roles")
-async def return_roles():
+@router.get("/roles", response_model=list[Role])
+async def fetch_roles(role_service: RoleService = Depends(get_role_service)):
     """Fetch all roles."""
 
-    return {"message": "This is create role entrypoint!"}
+    return role_service.fetch_roles()
 
 
 @router.post(

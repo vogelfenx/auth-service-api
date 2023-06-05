@@ -5,7 +5,7 @@ from fastapi import Depends
 from core.logger import get_logger
 from db.storage.auth_db import PgConnector
 from db.storage.dependency import get_storage
-from db.storage.models import Role
+from .models import Role
 
 logger = get_logger(__name__, DEBUG)
 
@@ -28,6 +28,11 @@ class RoleService:
     def edit_role_by_id(self, role_id, role: Role) -> None:
         """Edit a role by id."""
         self.storage.role_connector.edit_role(id=role_id, **role.dict())
+
+    def fetch_roles(self) -> list[Role]:
+        roles = self.storage.role_connector.fetch_roles()
+        roles = [Role(**role.__dict__) for role in roles]
+        return roles
 
 
 def get_role_service(

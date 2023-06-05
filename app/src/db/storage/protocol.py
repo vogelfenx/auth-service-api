@@ -53,3 +53,6 @@ class RoleStorage(typing.Protocol):
 
     def edit_role(self, id: UUID, **kwargs) -> None:
         ...
+
+    def fetch_roles(self) -> list[Role]:
+        ...
