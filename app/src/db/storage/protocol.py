@@ -14,6 +14,10 @@ class Role(typing.Protocol):
     """Role protocol representation."""
 
 
+class UserProfile(typing.Protocol):
+    """Assigned role to user"""
+
+
 class Permission(typing.Protocol):
     pass
 
@@ -55,4 +59,7 @@ class RoleStorage(typing.Protocol):
         ...
 
     def fetch_roles(self) -> list[Role]:
+        ...
+
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         ...

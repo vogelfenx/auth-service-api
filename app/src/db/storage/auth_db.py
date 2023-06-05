@@ -194,3 +194,28 @@ class RoleConnector(protocol.RoleStorage):
             raise e
 
         return roles
+
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
+        """Assign a role to an user."""
+        logger.debug(
+            f"Assign role with id {role_id} to user with id {user_id}",
+        )
+
+        user_profile = UserProfile(
+            user_id=user_id,
+            role_id=role_id,
+            # TODO: do we really need the permissions in UserRole?
+            permission_id="eda0b04e-6fda-4d7f-b88d-5bfb1a66f697",
+        )
+        try:
+            self.session.add(user_profile)
+            self.session.flush()
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug("Role assigned to user successfully")
+
+        return user_profile

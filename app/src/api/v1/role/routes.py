@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from core.logger import get_logger
 
-from .models import Role
+from .models import Role, UserRole
 from .service import RoleService, get_role_service
 
 logger = get_logger(__name__, DEBUG)
@@ -74,14 +74,19 @@ async def fetch_roles(role_service: RoleService = Depends(get_role_service)):
 @router.post(
     "/assign",
     status_code=status.HTTP_200_OK,
+    response_model=UserRole,
 )
-async def assign(
-    role_id: Annotated[str, Query(description="A role id.")],
-    user_id: Annotated[str, Query(description="A user id.")],
+async def assign_role(
+    role_id: Annotated[UUID, Query(description="A role id.")],
+    user_id: Annotated[UUID, Query(description="A user id.")],
+    role_service: RoleService = Depends(get_role_service),
 ):
     """Assign a role to a user."""
-
-    return {"message": "This is create role entrypoint!"}
+    user_role = role_service.assign_role_to_user(
+        role_id=role_id,
+        user_id=user_id,
+    )
+    return user_role
 
 
 @router.post(
