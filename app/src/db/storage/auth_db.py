@@ -1,8 +1,11 @@
 # В этом модуле предполагается реализовать модель хранения данных сервиса auth_api
 # TODO: в будущем добавить абстрактные классы
 
-from sqlalchemy import create_engine, select, update, insert
+from sqlalchemy import create_engine, select, update, insert, delete
 from sqlalchemy.orm import Session
+from db.storage import protocol
+from logging import DEBUG
+from uuid import UUID
 
 from db.storage.models import (
     BaseTable,
@@ -13,7 +16,10 @@ from db.storage.models import (
     Permission,
 )
 from core.config import postgres_settings as pg_conf
+from core.logger import get_logger
 from security.hasher import Hasher
+
+logger = get_logger(__name__, DEBUG)
 
 
 class PgConnector:
@@ -23,6 +29,8 @@ class PgConnector:
         )
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
+
+        self.role_connector = RoleConnector(self.session)
 
     def get_user(self, username: str) -> User:
         stmt = select(User).where(
@@ -120,3 +128,94 @@ class PgConnector:
         if not Hasher.verify_password(password, user.hashed_password):
             return False
         return user
+
+
+class RoleConnector(protocol.RoleStorage):
+    def __init__(self, session) -> None:
+        self.session = session
+
+    def create_role(self, **kwargs) -> Role:
+        """Create a new role."""
+        logger.debug(f"Insert role: {kwargs}")
+
+        created_role = None
+        stmt = insert(Role).values(kwargs).returning(Role)
+        try:
+            created_role = self.session.execute(stmt).fetchone()[0]
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"The role was inserted successfully: {created_role}")
+
+        return created_role
+
+    def delete_role(self, id: UUID) -> None:
+        """Delete role by id."""
+        logger.debug(f"Delete role with id: {id}")
+
+        stmt = delete(Role).where(Role.id == id)
+        try:
+            self.session.execute(stmt)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"Role with id {id} deleted successfully")
+
+    def edit_role(self, id: UUID, **kwargs) -> None:
+        logger.debug(f"Edit a role with id: {id}")
+
+        stmt = update(Role).where(Role.id == id).values(**kwargs)
+        try:
+            self.session.execute(stmt)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"Role with id {id} edited successfully")
+
+    def fetch_roles(self) -> list[Role]:
+        """Fetch all roles."""
+        logger.debug("Fetch all roles")
+
+        stmt = select(Role)
+        try:
+            result = self.session.execute(stmt)
+            roles = result.scalars().all()
+        except Exception as e:
+            logger.error(e)
+            raise e
+
+        return roles
+
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
+        """Assign a role to an user."""
+        logger.debug(
+            f"Assign role with id {role_id} to user with id {user_id}",
+        )
+
+        user_profile = UserProfile(
+            user_id=user_id,
+            role_id=role_id,
+            # TODO: do we really need the permissions in UserRole?
+            permission_id="eda0b04e-6fda-4d7f-b88d-5bfb1a66f697",
+        )
+        try:
+            self.session.add(user_profile)
+            self.session.flush()
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug("Role assigned to user successfully")
+
+        return user_profile

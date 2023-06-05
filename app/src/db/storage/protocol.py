@@ -1,4 +1,5 @@
 import typing
+from uuid import UUID
 
 
 class User(typing.Protocol):
@@ -10,7 +11,11 @@ class User(typing.Protocol):
 
 
 class Role(typing.Protocol):
-    pass
+    """Role protocol representation."""
+
+
+class UserProfile(typing.Protocol):
+    """Assigned role to user"""
 
 
 class Permission(typing.Protocol):
@@ -40,4 +45,21 @@ class Storage(typing.Protocol):
         ...
 
     def user_exists(self) -> bool:
+        ...
+
+
+class RoleStorage(typing.Protocol):
+    def create_role(self, **kwargs) -> Role:
+        ...
+
+    def delete_role(self, id: UUID) -> None:
+        ...
+
+    def edit_role(self, id: UUID, **kwargs) -> None:
+        ...
+
+    def fetch_roles(self) -> list[Role]:
+        ...
+
+    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         ...

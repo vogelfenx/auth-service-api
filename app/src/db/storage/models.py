@@ -2,7 +2,7 @@ from uuid import uuid4, UUID
 from typing import Optional, List
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint, Index
 
 from datetime import datetime
 
@@ -10,7 +10,7 @@ from datetime import datetime
 class BaseTable(DeclarativeBase):
     id: Mapped[UUID] = mapped_column(
         primary_key=True,
-        default=UUID(uuid4().hex),
+        default=uuid4,
     )
     created: Mapped[datetime] = mapped_column(
         default=datetime.now,
@@ -51,10 +51,15 @@ class Role(BaseTable):
     __tablename__ = "role"
 
     role: Mapped[str]
-    disabled = Mapped[bool]
-    description = Mapped[Optional[str]]
+    disabled: Mapped[bool]
+    description: Mapped[Optional[str]]
 
     roles_participant: Mapped[List["UserProfile"]] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("role", name="uniq_role"),
+        Index("idx_role", "role"),
+    )
 
     def __repr__(self) -> str:
         return f"Role(name={self.role}, disabled={self.disabled})"
