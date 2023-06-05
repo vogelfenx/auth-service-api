@@ -130,7 +130,9 @@ class PgConnector:
         return user
 
 
-class RoleConnector(protocol.RoleStorage):
+class RoleConnector:
+    """RoleConnector provides methods to work with roles."""
+
     def __init__(self, session) -> None:
         self.session = session
 
@@ -142,13 +144,12 @@ class RoleConnector(protocol.RoleStorage):
         stmt = insert(Role).values(kwargs).returning(Role)
         try:
             created_role = self.session.execute(stmt).fetchone()[0]
-        except Exception as e:
-            self.session.rollback()
-            logger.error(e)
-            raise e
-        else:
             self.session.commit()
             logger.debug(f"The role was inserted successfully: {created_role}")
+        except Exception as e:
+            logger.error(e)
+            self.session.rollback()
+            raise e
 
         return created_role
 
@@ -159,27 +160,26 @@ class RoleConnector(protocol.RoleStorage):
         stmt = delete(Role).where(Role.id == id)
         try:
             self.session.execute(stmt)
-        except Exception as e:
-            self.session.rollback()
-            logger.error(e)
-            raise e
-        else:
             self.session.commit()
             logger.debug(f"Role with id {id} deleted successfully")
+        except Exception as e:
+            logger.error(e)
+            self.session.rollback()
+            raise e
 
     def edit_role(self, id: UUID, **kwargs) -> None:
+        """Edit role by id."""
         logger.debug(f"Edit a role with id: {id}")
 
         stmt = update(Role).where(Role.id == id).values(**kwargs)
         try:
             self.session.execute(stmt)
-        except Exception as e:
-            self.session.rollback()
-            logger.error(e)
-            raise e
-        else:
             self.session.commit()
             logger.debug(f"Role with id {id} edited successfully")
+        except Exception as e:
+            logger.error(e)
+            self.session.rollback()
+            raise e
 
     def fetch_roles(self) -> list[Role]:
         """Fetch all roles."""
@@ -210,12 +210,11 @@ class RoleConnector(protocol.RoleStorage):
         try:
             self.session.add(user_profile)
             self.session.flush()
-        except Exception as e:
-            self.session.rollback()
-            logger.error(e)
-            raise e
-        else:
             self.session.commit()
             logger.debug("Role assigned to user successfully")
+        except Exception as e:
+            logger.error(e)
+            self.session.rollback()
+            raise e
 
         return user_profile
