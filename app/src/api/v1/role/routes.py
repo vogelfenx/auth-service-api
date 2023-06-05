@@ -50,10 +50,18 @@ async def delete_role(
 
 
 @router.put("/role/{role_id}")
-async def edit_role():
-    """Change a role by id."""
-
-    return {"message": "This is edit role entrypoint!"}
+async def edit_role(
+    role_id: Annotated[UUID, Path(description="ID of the role to edit")],
+    role: Role,
+    role_service: RoleService = Depends(get_role_service),
+):
+    """Edit a role by id."""
+    try:
+        role_service.edit_role_by_id(role_id=role_id, role=role)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @router.get("/roles")

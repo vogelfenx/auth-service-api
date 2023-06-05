@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, select, update, insert, delete
 from sqlalchemy.orm import Session
 from db.storage import protocol
 from logging import DEBUG
+from uuid import UUID
 
 from db.storage.models import (
     BaseTable,
@@ -151,7 +152,7 @@ class RoleConnector(protocol.RoleStorage):
 
         return created_role
 
-    def delete_role(self, id) -> None:
+    def delete_role(self, id: UUID) -> None:
         """Delete role by id."""
         logger.debug(f"Delete role with id: {id}")
 
@@ -165,3 +166,17 @@ class RoleConnector(protocol.RoleStorage):
         else:
             self.session.commit()
             logger.debug(f"Role with id {id} deleted successfully")
+
+    def edit_role(self, id: UUID, **kwargs) -> None:
+        logger.debug(f"Edit a role with id: {id}")
+
+        stmt = update(Role).where(Role.id == id).values(**kwargs)
+        try:
+            self.session.execute(stmt)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        else:
+            self.session.commit()
+            logger.debug(f"Role with id {id} edited successfully")

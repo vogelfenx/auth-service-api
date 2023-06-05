@@ -1,4 +1,5 @@
 import typing
+from uuid import UUID
 
 
 class User(typing.Protocol):
@@ -44,8 +45,11 @@ class Storage(typing.Protocol):
 
 
 class RoleStorage(typing.Protocol):
-    def create_role(self) -> Role:
+    def create_role(self, **kwargs) -> Role:
         ...
 
-    def delete_role(self, id) -> None:
+    def delete_role(self, id: UUID) -> None:
+        ...
+
+    def edit_role(self, id: UUID, **kwargs) -> None:
         ...
