@@ -52,8 +52,9 @@ async def signin(
     return {"message": "The user has been created!"}
 
 
-@router.post("/token", response_model=Token)
+@router.post("/token")
 async def login_for_access_token(
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     storage: Storage = Depends(get_storage),
 ):
@@ -82,11 +83,16 @@ async def login_for_access_token(
         data={"sub": user.username},
         expires_delta=refresh_token_expires,
     )
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+    )
 
 
 @router.get("/logout")

@@ -34,7 +34,7 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/service/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
 
 
 def create_token(
