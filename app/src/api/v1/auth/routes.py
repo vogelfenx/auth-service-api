@@ -26,6 +26,7 @@ from security.token import (
     get_current_username_from_token,
 )
 from security.hasher import Hasher
+from security.token import is_token_invalidated
 from .models import UserAnnotated
 
 logger = get_logger(__name__)
@@ -160,26 +161,58 @@ async def get_user_history(
 
 @router.post("/refresh")
 async def refresh(request: Request, response: Response):
-    refresh_token = request.cookies["refresh_token"]
+    refresh_token = request.cookies.get("refresh_token")
 
     if not refresh_token:
-        raise ValueError("No refresh token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if await is_token_invalidated(refresh_token, token_name='refresh_token'):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is invalidated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     payload = decode_token(refresh_token)
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
+
+    refresh_token_expires = timedelta(
+        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+    )
+
     access_token = create_token(
         data={"sub": payload.get("sub")},
         expires_delta=access_token_expires,
     )
 
-    logger.debug("refresh_token: {0}".format(refresh_token))
-    logger.debug("access_token: {0}".format(access_token))
+    await add_blacklist_token(
+        token=refresh_token,
+        token_name="refresh_token",
+    )
+
+    refresh_token = create_token(
+        data={"sub": payload.get("sub")},
+        expires_delta=refresh_token_expires,
+    )
+
+    logger.debug("New refresh_token: {0}".format(refresh_token))
+    logger.debug("New access_token: {0}".format(access_token))
 
     response.set_cookie(
         key="access_token",
         value=access_token,
+        secure=True,
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
         secure=True,
     )
