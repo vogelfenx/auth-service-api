@@ -119,3 +119,19 @@ async def add_blacklist_token(
         key_value=token,
         ttl=token_ttl,
     )
+
+
+async def is_token_invalidated(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    token_name: str,
+) -> bool:
+    """Check if token is in blacklist."""
+
+    cache = await get_cache()
+
+    decoded_token = decode_token(token)
+    username = decoded_token.get("sub")
+
+    token_key = f"{username}:{token_name}:{token}"
+
+    return await cache.exists(token_key) > 0
