@@ -1,5 +1,7 @@
 from datetime import timedelta
+from os import access
 from typing import Annotated
+from urllib import response
 
 from core.config import security_settings
 from core.logger import get_logger
@@ -96,14 +98,32 @@ async def login_for_access_token(
 
 
 @router.get("/logout")
-async def logout(token: str = Depends(get_current_username_from_token)):
-    """Logout also delete jwt token."""
+async def logout(
+    response: Response,
+    request: Request,
+):
+    """Logout the current user.
 
-    # TODO попробовать использовать тут протокол
-    if await add_blacklist_token(token):
-        # TODO Переделать на orjson
-        return status.HTTP_200_OK
-    return status.HTTP_500_INTERNAL_SERVER_ERROR
+    Add token to blacklist with expiration date of refresh_token.
+    Delete tokens in cookies.
+    """
+    access_token = request.cookies["access_token"]
+    refresh_token = request.cookies["refresh_token"]
+
+    await add_blacklist_token(
+        token=access_token,
+        token_name="access_token",
+    )
+    await add_blacklist_token(
+        token=refresh_token,
+        token_name="refresh_token",
+    )
+
+    # TODO: хотим ли мы удалять ключи на стороне клиента?
+    # response.delete_cookie(key="access_token")
+    # response.delete_cookie(key="refresh_token")
+
+    return status.HTTP_200_OK
 
 
 # TODO добавить ручку change_pass (должен производить логаут)

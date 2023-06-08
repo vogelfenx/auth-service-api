@@ -8,6 +8,8 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 from db.storage.dependency import get_storage
 from db.storage.protocol import Storage, User
+from db.cache.dependency import get_cache
+from db.cache.protocol import Cache
 
 from src.db.storage.auth_db import PgConnector
 
@@ -99,7 +101,21 @@ async def get_current_user_token(
     return token
 
 
-async def add_blacklist_token(token):
-    logger.warning("This is dummy function")
+async def add_blacklist_token(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    token_name: str,
+) -> None:
+    """Add a token to blacklist to invalidate it."""
+    cache = await get_cache()
+    decoded_token = decode_token(token)
 
-    return True
+    username = decoded_token.get("sub")
+    token_ttl = decoded_token.get("exp")
+
+    token_key = f"{username}:{token_name}:{token}"
+
+    await cache.set(
+        key=token_key,
+        key_value=token,
+        ttl=token_ttl,
+    )
