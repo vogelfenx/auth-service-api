@@ -28,6 +28,29 @@ class RedisCache:
             port=port,
         )
 
+    async def get(self, key: str) -> Any | None:
+        """Get value by key."""
+        logger.debug(f"Get value from key '{key}'")
+
+        key_value = await self.redis.get(name=key)
+
+        if isinstance(key_value, bytes):
+            key_value = orjson.loads(key_value.decode("utf-8"))
+
+        return key_value
+
+    async def set(
+        self,
+        key: str,
+        key_value: Any,
+        ttl: float | timedelta | None = None,
+    ) -> None:
+        """Set key-value pair."""
+        logger.debug(
+            f"Set key '{key}' to value {key_value} with expiration {ttl}'",
+        )
+        await self.redis.set(name=key, value=key_value, ex=ttl)
+
     async def hget(self, name: str, key: str) -> str | None:
         """Get value from key within hash name."""
         logger.debug(f"Get value from key '{key}' within hash '{name}'.")

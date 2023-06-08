@@ -1,10 +1,19 @@
+from datetime import timedelta
 from typing import Protocol, Any
 
 
 class Cache(Protocol):
     """Cache protocol."""
 
-    def hget(self, name: str, key: str) -> str | None:
+    def get(self, key: str) -> Any | None:
+        """Get value by key."""
+        ...
+
+    def set(self, key: str, key_value: Any, ttl: float | timedelta | None) -> None:
+        """Set key-value pair."""
+        ...
+
+    def hget(self, name: str, key: str) -> Any | None:
         """Get value from key within hash name."""
         ...
 
@@ -16,7 +25,7 @@ class Cache(Protocol):
         """Delete key."""
         ...
 
-    def exists(self, key: str) -> bool | int:
+    def exists(self, *keys) -> bool | int:
         """Return counter of key(s) if key(s) exist(s)."""
         ...
 
