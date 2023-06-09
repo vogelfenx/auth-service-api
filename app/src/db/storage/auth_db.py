@@ -1,7 +1,5 @@
-# В этом модуле предполагается реализовать модель хранения данных сервиса auth_api
-# TODO: в будущем добавить абстрактные классы
-
 from sqlalchemy import create_engine, select, update, insert, delete
+from sqlalchemy.sql import exists
 from sqlalchemy.orm import Session
 from db.storage import protocol
 from logging import DEBUG
@@ -25,14 +23,25 @@ logger = get_logger(__name__, DEBUG)
 class PgConnector:
     def __init__(self) -> None:
         self.engine = create_engine(
-            f"postgresql+psycopg2://{'app'}:{'123qwe'}@{pg_conf.POSTGRES_HOST}/auth_database"
+            f"postgresql+psycopg2://{pg_conf.POSTGRES_USER}:"
+            f"{pg_conf.POSTGRES_PASSWORD}@"
+            f"{pg_conf.POSTGRES_HOST}:"
+            f"{pg_conf.POSTGRES_PORT}/"
+            f"{pg_conf.POSTGRES_DB}"
         )
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
-        self.role_connector = RoleConnector(self.session)
-
     def get_user(self, username: str) -> User:
+        """
+        Fetch User class instance, build on retieved data from DB
+
+        Args:
+            username: name of user
+
+        Returns:
+            User class instance
+        """
         stmt = select(User).where(
             User.username == username, User.disabled == False
         )
@@ -41,10 +50,19 @@ class PgConnector:
         except Exception:
             self.session.rollback()
             raise Exception
-        else:
+        finally:
             self.session.commit()
 
     def get_user_roles(self, username: str) -> list[Role]:
+        """
+        Get roles for specified user.
+
+        Args:
+            username: name of specified user
+
+        Returns:
+            list of Role's class instances
+        """
         stmt = (
             select(Role)
             .join(UserProfile, Role.id == UserProfile.role_id)
@@ -56,10 +74,19 @@ class PgConnector:
         except Exception:
             self.session.rollback()
             raise Exception
-        else:
+        finally:
             self.session.commit()
 
     def get_user_permissions(self, username: str) -> list[Permission]:
+        """
+        Get permissions for specified user.
+
+        Args:
+            username: name of specified user
+
+        Returns:
+            list of Permission's class instances
+        """
         stmt = (
             select(Permission)
             .join(UserProfile, Permission.id == UserProfile.permission_id)
@@ -71,10 +98,20 @@ class PgConnector:
         except Exception:
             self.session.rollback()
             raise Exception
-        else:
+        finally:
             self.session.commit()
 
-    def set_password(self, username: str, h_password: str):
+    def set_password(self, username: str, h_password: str) -> None:
+        """
+        Set password for specified user.
+
+        Args:
+            username: name of specified user
+            h_password: hashed password to be set
+
+        Returns:
+            None
+        """
         stmt = (
             update(User)
             .where(User.username == username)
@@ -85,10 +122,19 @@ class PgConnector:
         except Exception:
             self.session.rollback()
             raise Exception
-        else:
+        finally:
             self.session.commit()
 
-    def set_user(self, **kwargs):
+    def set_user(self, **kwargs) -> None:
+        """
+        Create user with any valid params.
+
+        Args:
+            kwargs: any valid User class attributes
+
+        Returns:
+            None
+        """
         stmt = insert(User).values(kwargs)
         try:
             self.session.execute(stmt)
@@ -96,38 +142,104 @@ class PgConnector:
             self.session.rollback()
             print(e)
             raise e
-        else:
+        finally:
             self.session.commit()
 
     def edit_user(self, username: str, **kwargs):
+        """
+        Update specified user's params.
+
+        Args:
+            username: name of specified user
+            kwargs: any valid User class attributes
+
+        Returns:
+            None
+        """
         stmt = update(User).where(User.username == username).values(kwargs)
         try:
             self.session.execute(stmt)
         except Exception:
             self.session.rollback()
             raise Exception
-        else:
+        finally:
             self.session.commit()
 
-    def close(self):
-        self.session.close()
+    def user_exists(self, username: str) -> bool:
+        """
+        Check whether specified user exists
 
-    def user_exists(self) -> bool:
-        # TODO: Реализовать логику
+        Args:
+            username: name of specified user
 
-        return False
+        Returns:
+            bool user existence flag
+        """
+        stmt = select(exists(1).where(User.username == username))
+        try:
+            is_exists = self.session.execute(stmt).fetchone()[0]
+        except Exception:
+            self.session.rollback()
+            raise Exception
+        finally:
+            self.session.commit()
+        return is_exists
 
     def authenticate_user(
         self,
         username: str,
         password: str,
-    ):
+    ) -> User | bool:
+        """
+        Authenticate specified user.
+
+        Args:
+            username: name of specified user
+            password: password to be verified
+
+        Returns:
+            User | bool: User class instance if user have been authenticated.
+            False if user haven't been authenticated.
+        """
         user = self.get_user(username)
         if not user:
             return False
         if not Hasher.verify_password(password, user.hashed_password):
             return False
         return user
+
+    def get_user_history(
+        self,
+        username: str,
+        history_limit: int
+    ) -> list[LoginHistory]:
+        stmt = (
+            select(LoginHistory)
+            .join(User, LoginHistory.user_id == User.id)
+            .where(User.username == username)
+            .limit(history_limit)
+        )
+
+        return [row.LoginHistory for row in self.session.execute(stmt).all()]
+
+    def update_user_password(self, username: str, password: str):
+        hashed_password = Hasher.get_password_hash(password=password)
+        stmt = (
+            update(User)
+            .where(User.username == username)
+            .values(hashed_password=hashed_password)
+        )
+        try:
+            self.session.execute(stmt)
+        except Exception:
+            self.session.rollback()
+            raise Exception
+        finally:
+            self.session.commit()
+
+    def close(self):
+        """Close active database session"""
+        self.session.close()
 
 
 class RoleConnector:
