@@ -11,7 +11,7 @@ from db.storage.protocol import Storage, User
 from db.cache.dependency import get_cache
 from db.cache.protocol import Cache
 
-from src.db.storage.auth_db import PgConnector
+from src.db.storage.auth_db import PostgresStorage
 
 from core.logger import get_logger
 from core.config import security_settings

@@ -22,6 +22,11 @@ class Permission(typing.Protocol):
     pass
 
 
+class Storage(typing.Protocol):
+    def close(self) -> None:
+        ...
+
+
 class RoleStorage(typing.Protocol):
     def create_role(self, **kwargs) -> Role:
         ...
@@ -39,7 +44,7 @@ class RoleStorage(typing.Protocol):
         ...
 
 
-class Storage(typing.Protocol):
+class UserStorage(typing.Protocol):
     def get_user(self, username: str) -> User:
         ...
 
@@ -58,12 +63,5 @@ class Storage(typing.Protocol):
     def edit_user(self, username: str, **kwargs):
         ...
 
-    def close(self):
-        ...
-
     def user_exists(self) -> bool:
-        ...
-
-    @property
-    def role_connector() -> RoleStorage:
         ...

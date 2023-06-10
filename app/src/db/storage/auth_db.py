@@ -20,7 +20,7 @@ from security.hasher import Hasher
 logger = get_logger(__name__, DEBUG)
 
 
-class PgConnector:
+class PostgresStorage:
     def __init__(self) -> None:
         self.engine = create_engine(
             f"postgresql+psycopg2://{pg_conf.POSTGRES_USER}:"
@@ -43,7 +43,8 @@ class PgConnector:
             User class instance
         """
         stmt = select(User).where(
-            User.username == username, User.disabled == False
+            User.username == username,
+            User.disabled == False,
         )
         try:
             return self.session.execute(stmt).one()[0]
@@ -209,9 +210,7 @@ class PgConnector:
         return user
 
     def get_user_history(
-        self,
-        username: str,
-        history_limit: int
+        self, username: str, history_limit: int
     ) -> list[LoginHistory]:
         stmt = (
             select(LoginHistory)
