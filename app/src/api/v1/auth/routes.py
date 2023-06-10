@@ -24,6 +24,7 @@ from security.token import (
     create_token,
     decode_token,
     get_current_username_from_token,
+    oauth2_scheme
 )
 from security.hasher import Hasher
 from security.token import is_token_invalidated
@@ -41,8 +42,7 @@ async def signin(
 ):
     """Registration a user."""
 
-    # TODO: Проверить нет ли существующего пользователя и вернуть ошибку, если есть
-    if storage.user_exists():
+    if storage.user_exists(user.username):
         return status.HTTP_409_CONFLICT
 
     psw: str = user.password.get_secret_value()
@@ -97,6 +97,8 @@ async def login_for_access_token(
         httponly=True,
     )
 
+    return {"access_token": access_token, "token_type": "bearer"}
+
 
 @router.get("/logout")
 async def logout(
@@ -127,36 +129,99 @@ async def logout(
     return status.HTTP_200_OK
 
 
-# TODO добавить ручку change_pass (должен производить логаут)
-# Igor
 @router.put("/user/password")
 async def change_password(
+    response: Response,
+    request: Request,
     current_user: Annotated[User, Depends(get_current_username_from_token)],
-    psw: Annotated[str, Query(description="User hashed password.")],
+    new_psw: Annotated[str, Query(description="New user password.")],
+    old_psw: Annotated[str, Query(description="Old user password.")],
+    storage: Storage = Depends(get_storage),
 ):
     """Change password for user by id."""
 
-    return {"message": "This is a user editor!"}
+    if not storage.authenticate_user(username=current_user, password=old_psw):
+        return status.HTTP_401_UNAUTHORIZED
+
+    access_token = request.cookies["access_token"]
+    refresh_token = request.cookies["refresh_token"]
+
+    if await add_blacklist_token(access_token) and \
+       await add_blacklist_token(refresh_token):
+        storage.update_user_password(username=current_user,
+                                     password=new_psw)
+
+    access_token_expires = timedelta(
+        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
+    refresh_token_expires = timedelta(
+        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+    )
+
+    access_token = create_token(
+        data={"sub": current_user},
+        expires_delta=access_token_expires,
+    )
+    refresh_token = create_token(
+        data={"sub": current_user},
+        expires_delta=refresh_token_expires,
+    )
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+    )
+
+    return {"message": "User password has been updated!"}
 
 
 @router.put("/user/edit")
 async def edit_common_user_info(
     current_user: Annotated[User, Depends(get_current_username_from_token)],
-    login: Annotated[str, Query(description="A user login.")],
-    psw: Annotated[str, Query(description="User hashed password.")],
+    psw: Annotated[str, Query(description="User password.")],
+    email: Annotated[str | None, Query(description='User email.')],
+    full_name: Annotated[str | None, Query(description='User full name.')],
+    disabled: Annotated[bool, Query(description='Disabled user flag.')],
+    storage: Storage = Depends(get_storage),
 ):
-    """Change login or password for user by id."""
+    """Change login or password for user by username."""
+    if not storage.authenticate_user(username=current_user, password=psw):
+        return status.HTTP_400_BAD_REQUEST
 
-    return {"message": "This is a user editor!"}
+    user_info = {
+        "email": email,
+        "full_name": full_name,
+        "disabled": disabled
+    }
+
+    storage.edit_user(username=current_user.username, **user_info)
+
+    return {"message": "User has been changed!"}
 
 
 @router.get("/user/history")
 async def get_user_history(
     current_user: Annotated[User, Depends(get_current_username_from_token)],
+    limit: Annotated[int | None, Query(description="User history limit")],
+    storage: Storage = Depends(get_storage)
 ):
-    """Get user history by id and token."""
+    """
+    Get user login history
 
-    return {"message": "This is a history!"}
+    Args:
+        current_user: user name of specified user
+        limit: User history limit
+        storage: Storage class
+
+    Returns:
+        List of LoginHistory class instances
+    """
+    return storage.get_user_history(username=current_user, history_limit=limit)
 
 
 @router.post("/refresh")

@@ -82,4 +82,6 @@ class LoginHistory(BaseTable):
     __tablename__ = "login_history"
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id"))
-    disabled: Mapped[bool]
+
+    def some(self):
+        return {"user_id": self.user_id, "created": self.created, "modified": self.modified}
