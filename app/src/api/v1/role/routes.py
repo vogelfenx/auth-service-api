@@ -18,7 +18,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def create_role(
-    role: Role,
+    role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
     """Create a new role."""
@@ -51,7 +51,7 @@ async def delete_role(
 @router.put("/role/{role_id}")
 async def edit_role(
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
-    role: Role,
+    role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ):
     """Edit a role by id."""

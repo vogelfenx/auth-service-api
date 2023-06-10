@@ -1,7 +1,6 @@
 from datetime import timedelta
-from os import access
 from typing import Annotated
-from urllib import response
+from fastapi.security.utils import get_authorization_scheme_param
 
 from core.config import security_settings
 from core.logger import get_logger
@@ -11,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Header,
     Path,
     Query,
     Request,
@@ -18,8 +18,8 @@ from fastapi import (
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
+from security.models import Token
 from security.token import (
-    Token,
     add_blacklist_token,
     create_token,
     decode_token,
@@ -65,16 +65,25 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     storage: Storage = Depends(get_storage),
 ):
-    user = storage.authenticate_user(
-        username=form_data.username,
-        password=form_data.password,
-    )
-    if not user:
+    try:
+        user = storage.authenticate_user(
+            username=form_data.username,
+            password=form_data.password,
+        )
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=" Username does not exist",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
@@ -230,23 +239,30 @@ async def get_user_history(
     Returns:
         List of LoginHistory class instances
     """
-    return storage.get_user_history(username=current_user, history_limit=limit)
+
+    # FIXME Игорь, пустой вывод, нужно поправить
+    return storage.get_user_history(
+        username=current_user.username,
+        history_limit=limit,
+    )
 
 
 @router.post("/refresh")
-async def refresh(request: Request, response: Response):
+async def refresh(
+    request: Request,
+    response: Response,
+):
     old_refresh_token = request.cookies.get("refresh_token")
+    schema, param = get_authorization_scheme_param(old_refresh_token)
 
-    if not old_refresh_token:
+    if not param:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if await is_token_invalidated(
-        old_refresh_token, token_name="refresh_token"
-    ):
+    if await is_token_invalidated(param, token_name="refresh_token"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalidated",
@@ -283,12 +299,12 @@ async def refresh(request: Request, response: Response):
 
     response.set_cookie(
         key="access_token",
-        value=access_token,
+        value="Bearer {0}".format(access_token),
         secure=True,
     )
 
     response.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value="Bearer {0}".format(refresh_token),
         secure=True,
     )

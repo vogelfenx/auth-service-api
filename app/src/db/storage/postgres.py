@@ -249,13 +249,6 @@ class PostgresStorage:
         """Close active database session"""
         self.session.close()
 
-
-class RoleConnector:
-    """RoleConnector provides methods to work with roles."""
-
-    def __init__(self, session) -> None:
-        self.session = session
-
     def create_role(self, **kwargs) -> Role:
         """Create a new role."""
         logger.debug(f"Insert role: {kwargs}")
