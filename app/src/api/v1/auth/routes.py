@@ -45,7 +45,7 @@ async def signup(
     if storage.user_exists(user.username):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Incorrect username or password",
+            detail="Username already exists!",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -101,7 +101,11 @@ async def login_for_access_token(
         httponly=True,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @router.get("/logout")
@@ -126,9 +130,8 @@ async def logout(
         token_name="refresh_token",
     )
 
-    # TODO: хотим ли мы удалять ключи на стороне клиента?
-    # response.delete_cookie(key="access_token")
-    # response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
 
     return status.HTTP_200_OK
 

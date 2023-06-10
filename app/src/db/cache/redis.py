@@ -46,6 +46,7 @@ class RedisCache:
         ttl: float | timedelta | None = None,
     ) -> None:
         """Set key-value pair."""
+        # FIXME Кирилл, здесь и в остальных местах поправить форматирование строк
         logger.debug(
             f"Set key '{key}' to value {key_value} with expiration {ttl}'",
         )
