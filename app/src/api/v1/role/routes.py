@@ -1,7 +1,7 @@
 from logging import DEBUG, INFO
 from typing import Annotated
 from uuid import UUID
-from api.v1.deps import CurrenUserAnnotated
+from api.v1.deps import CurrentUserAnnotated
 
 from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
