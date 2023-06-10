@@ -35,15 +35,19 @@ logger.setLevel(level="DEBUG")
 router = APIRouter()
 
 
-@router.post("/signin")
-async def signin(
+@router.post("/signup")
+async def signup(
     user: UserAnnotated,
     storage: Storage = Depends(get_storage),
 ):
     """Registration a user."""
 
     if storage.user_exists(user.username):
-        return status.HTTP_409_CONFLICT
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     psw: str = user.password.get_secret_value()
     hashed_password = Hasher.get_password_hash(password=psw)
