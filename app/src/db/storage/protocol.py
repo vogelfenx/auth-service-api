@@ -2,7 +2,7 @@ import typing
 from uuid import UUID
 
 
-class User(typing.Protocol):
+class StorageUserModel(typing.Protocol):
     username: str
     email: str | None = None
     full_name: str | None = None
@@ -10,20 +10,26 @@ class User(typing.Protocol):
     hashed_password: str
 
 
-class Role(typing.Protocol):
+class StorageRoleModel(typing.Protocol):
+    id: str
     """Role protocol representation."""
 
 
-class UserProfile(typing.Protocol):
+class StorageUserProfileModel(typing.Protocol):
     """Assigned role to user"""
 
 
-class Permission(typing.Protocol):
+class StoragePermissionModel(typing.Protocol):
     pass
 
 
+class Storage(typing.Protocol):
+    def close(self) -> None:
+        ...
+
+
 class RoleStorage(typing.Protocol):
-    def create_role(self, **kwargs) -> Role:
+    def create_role(self, **kwargs) -> StorageRoleModel:
         ...
 
     def delete_role(self, id: UUID) -> None:
@@ -32,21 +38,25 @@ class RoleStorage(typing.Protocol):
     def edit_role(self, id: UUID, **kwargs) -> None:
         ...
 
-    def fetch_roles(self) -> list[Role]:
+    def fetch_roles(self) -> list[StorageRoleModel]:
         ...
 
-    def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
+    def assign_role_to_user(
+        self, user_id: UUID, role_id: UUID
+    ) -> StorageUserProfileModel:
         ...
 
 
-class Storage(typing.Protocol):
-    def get_user(self, username: str) -> User:
+class UserStorage(typing.Protocol):
+    def get_user(self, username: str) -> StorageUserModel:
         ...
 
-    def get_user_roles(self, username: str) -> list[Role]:
+    def get_user_roles(self, username: str) -> list[StorageRoleModel]:
         ...
 
-    def get_user_permissions(self, username: str) -> list[Permission]:
+    def get_user_permissions(
+        self, username: str
+    ) -> list[StoragePermissionModel]:
         ...
 
     def set_password(self, username: str, h_password: str):
@@ -58,12 +68,5 @@ class Storage(typing.Protocol):
     def edit_user(self, username: str, **kwargs):
         ...
 
-    def close(self):
-        ...
-
     def user_exists(self) -> bool:
-        ...
-
-    @property
-    def role_connector() -> RoleStorage:
         ...

@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine, select, update, insert, delete
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import Session
-from db.storage import protocol
 from logging import DEBUG
 from uuid import UUID
 
@@ -20,15 +19,17 @@ from security.hasher import Hasher
 logger = get_logger(__name__, DEBUG)
 
 
-class PgConnector:
+class PostgresStorage:
     def __init__(self) -> None:
-        self.engine = create_engine(
-            f"postgresql+psycopg2://{pg_conf.POSTGRES_USER}:"
-            f"{pg_conf.POSTGRES_PASSWORD}@"
-            f"{pg_conf.POSTGRES_HOST}:"
-            f"{pg_conf.POSTGRES_PORT}/"
-            f"{pg_conf.POSTGRES_DB}"
+        url = "{driver}://{user}:{password}@{host}:{port}/{database}".format(
+            driver="postgresql+psycopg2",
+            user=pg_conf.POSTGRES_USER,
+            password=pg_conf.POSTGRES_PASSWORD,
+            host=pg_conf.POSTGRES_HOST,
+            port=pg_conf.POSTGRES_PORT,
+            database=pg_conf.POSTGRES_DB,
         )
+        self.engine = create_engine(url)
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
@@ -43,7 +44,8 @@ class PgConnector:
             User class instance
         """
         stmt = select(User).where(
-            User.username == username, User.disabled == False
+            User.username == username,
+            User.disabled == False,
         )
         try:
             return self.session.execute(stmt).one()[0]
@@ -70,7 +72,10 @@ class PgConnector:
             .where(User.username == username)
         )
         try:
-            return self.session.execute(stmt).all()
+            # FIXME Игорь, возврат функции не соответсвует аннотации.
+            roles = self.session.execute(stmt).all()
+            return roles
+
         except Exception:
             self.session.rollback()
             raise Exception
@@ -94,6 +99,7 @@ class PgConnector:
             .where(User.username == username)
         )
         try:
+            # FIXME Игорь, возврат функции не соответсвует аннотации.
             return self.session.execute(stmt).all()
         except Exception:
             self.session.rollback()
@@ -140,6 +146,7 @@ class PgConnector:
             self.session.execute(stmt)
         except Exception as e:
             self.session.rollback()
+            # FIXME Игорь, заменить print
             print(e)
             raise e
         finally:
@@ -175,14 +182,17 @@ class PgConnector:
         Returns:
             bool user existence flag
         """
+        # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
         stmt = select(exists(1).where(User.username == username))
         try:
+            # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
             is_exists = self.session.execute(stmt).fetchone()[0]
         except Exception:
             self.session.rollback()
             raise Exception
         finally:
             self.session.commit()
+
         return is_exists
 
     def authenticate_user(
@@ -209,9 +219,7 @@ class PgConnector:
         return user
 
     def get_user_history(
-        self,
-        username: str,
-        history_limit: int
+        self, username: str, history_limit: int
     ) -> list[LoginHistory]:
         stmt = (
             select(LoginHistory)
@@ -240,13 +248,6 @@ class PgConnector:
     def close(self):
         """Close active database session"""
         self.session.close()
-
-
-class RoleConnector:
-    """RoleConnector provides methods to work with roles."""
-
-    def __init__(self, session) -> None:
-        self.session = session
 
     def create_role(self, **kwargs) -> Role:
         """Create a new role."""
@@ -309,6 +310,7 @@ class RoleConnector:
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
+        # FIXME Игорь, здесь и в остальных местах прошу поправить формат строк
         logger.debug(
             f"Assign role with id {role_id} to user with id {user_id}",
         )
@@ -316,8 +318,6 @@ class RoleConnector:
         user_profile = UserProfile(
             user_id=user_id,
             role_id=role_id,
-            # TODO: do we really need the permissions in UserRole?
-            permission_id="eda0b04e-6fda-4d7f-b88d-5bfb1a66f697",
         )
         try:
             self.session.add(user_profile)

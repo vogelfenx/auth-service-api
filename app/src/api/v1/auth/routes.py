@@ -1,16 +1,17 @@
 from datetime import timedelta
-from os import access
 from typing import Annotated
-from urllib import response
+from fastapi.security.utils import get_authorization_scheme_param
+from api.v1.deps import CurrentUserAnnotated
 
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
-from db.storage.protocol import Storage, User
+from db.storage.protocol import Storage, StorageUserModel
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Header,
     Path,
     Query,
     Request,
@@ -18,13 +19,13 @@ from fastapi import (
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
+from security.models import Token
 from security.token import (
-    Token,
     add_blacklist_token,
     create_token,
     decode_token,
     get_current_username_from_token,
-    oauth2_scheme
+    oauth2_scheme,
 )
 from security.hasher import Hasher
 from security.token import is_token_invalidated
@@ -35,15 +36,19 @@ logger.setLevel(level="DEBUG")
 router = APIRouter()
 
 
-@router.post("/signin")
-async def signin(
+@router.post("/signup")
+async def signup(
     user: UserAnnotated,
     storage: Storage = Depends(get_storage),
 ):
     """Registration a user."""
 
     if storage.user_exists(user.username):
-        return status.HTTP_409_CONFLICT
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists!",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     psw: str = user.password.get_secret_value()
     hashed_password = Hasher.get_password_hash(password=psw)
@@ -61,16 +66,25 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     storage: Storage = Depends(get_storage),
 ):
-    user = storage.authenticate_user(
-        username=form_data.username,
-        password=form_data.password,
-    )
-    if not user:
+    try:
+        user = storage.authenticate_user(
+            username=form_data.username,
+            password=form_data.password,
+        )
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=" Username does not exist",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
@@ -97,7 +111,11 @@ async def login_for_access_token(
         httponly=True,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @router.get("/logout")
@@ -122,9 +140,8 @@ async def logout(
         token_name="refresh_token",
     )
 
-    # TODO: хотим ли мы удалять ключи на стороне клиента?
-    # response.delete_cookie(key="access_token")
-    # response.delete_cookie(key="refresh_token")
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
 
     return status.HTTP_200_OK
 
@@ -133,9 +150,9 @@ async def logout(
 async def change_password(
     response: Response,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_username_from_token)],
     new_psw: Annotated[str, Query(description="New user password.")],
     old_psw: Annotated[str, Query(description="Old user password.")],
+    current_user: CurrentUserAnnotated,
     storage: Storage = Depends(get_storage),
 ):
     """Change password for user by id."""
@@ -146,10 +163,10 @@ async def change_password(
     access_token = request.cookies["access_token"]
     refresh_token = request.cookies["refresh_token"]
 
-    if await add_blacklist_token(access_token) and \
-       await add_blacklist_token(refresh_token):
-        storage.update_user_password(username=current_user,
-                                     password=new_psw)
+    if await add_blacklist_token(access_token) and await add_blacklist_token(
+        refresh_token
+    ):
+        storage.update_user_password(username=current_user, password=new_psw)
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -182,22 +199,18 @@ async def change_password(
 
 @router.put("/user/edit")
 async def edit_common_user_info(
-    current_user: Annotated[User, Depends(get_current_username_from_token)],
+    current_user: CurrentUserAnnotated,
     psw: Annotated[str, Query(description="User password.")],
-    email: Annotated[str | None, Query(description='User email.')],
-    full_name: Annotated[str | None, Query(description='User full name.')],
-    disabled: Annotated[bool, Query(description='Disabled user flag.')],
+    email: Annotated[str | None, Query(description="User email.")],
+    full_name: Annotated[str | None, Query(description="User full name.")],
+    disabled: Annotated[bool, Query(description="Disabled user flag.")],
     storage: Storage = Depends(get_storage),
 ):
     """Change login or password for user by username."""
     if not storage.authenticate_user(username=current_user, password=psw):
         return status.HTTP_400_BAD_REQUEST
 
-    user_info = {
-        "email": email,
-        "full_name": full_name,
-        "disabled": disabled
-    }
+    user_info = {"email": email, "full_name": full_name, "disabled": disabled}
 
     storage.edit_user(username=current_user.username, **user_info)
 
@@ -206,9 +219,9 @@ async def edit_common_user_info(
 
 @router.get("/user/history")
 async def get_user_history(
-    current_user: Annotated[User, Depends(get_current_username_from_token)],
+    current_user: CurrentUserAnnotated,
     limit: Annotated[int | None, Query(description="User history limit")],
-    storage: Storage = Depends(get_storage)
+    storage: Storage = Depends(get_storage),
 ):
     """
     Get user login history
@@ -221,28 +234,37 @@ async def get_user_history(
     Returns:
         List of LoginHistory class instances
     """
-    return storage.get_user_history(username=current_user, history_limit=limit)
+
+    # FIXME Игорь, пустой вывод, нужно поправить
+    return storage.get_user_history(
+        username=current_user.username,
+        history_limit=limit,
+    )
 
 
 @router.post("/refresh")
-async def refresh(request: Request, response: Response):
-    refresh_token = request.cookies.get("refresh_token")
+async def refresh(
+    request: Request,
+    response: Response,
+):
+    old_refresh_token = request.cookies.get("refresh_token")
+    schema, param = get_authorization_scheme_param(old_refresh_token)
 
-    if not refresh_token:
+    if not param:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if await is_token_invalidated(refresh_token, token_name='refresh_token'):
+    if await is_token_invalidated(param, token_name="refresh_token"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalidated",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = decode_token(refresh_token)
+    payload = decode_token(old_refresh_token)
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -258,7 +280,7 @@ async def refresh(request: Request, response: Response):
     )
 
     await add_blacklist_token(
-        token=refresh_token,
+        token=old_refresh_token,
         token_name="refresh_token",
     )
 
@@ -272,12 +294,12 @@ async def refresh(request: Request, response: Response):
 
     response.set_cookie(
         key="access_token",
-        value=access_token,
+        value="Bearer {0}".format(access_token),
         secure=True,
     )
 
     response.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value="Bearer {0}".format(refresh_token),
         secure=True,
     )

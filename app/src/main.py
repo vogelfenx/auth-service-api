@@ -3,7 +3,7 @@ from fastapi.responses import ORJSONResponse
 from core.config import api_settings
 from api.v1.role.routes import router as role_v1
 from api.v1.auth.routes import router as auth_v1
-from db.storage.auth_db import PgConnector
+from db.storage.postgres import PostgresStorage
 from db.cache.redis import RedisCache
 from db.storage import dependency as storage_db
 from db.cache import dependency as cache_dependency
@@ -19,7 +19,7 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup():
     """Start dependency."""
-    storage_db.storage = PgConnector()
+    storage_db.storage = PostgresStorage()
     cache_dependency.cache = RedisCache()
 
 

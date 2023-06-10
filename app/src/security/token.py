@@ -1,20 +1,17 @@
+import re
 from datetime import datetime, timedelta
 from typing import Annotated
-from functools import lru_cache
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from pydantic import BaseModel
-from db.storage.dependency import get_storage
-from db.storage.protocol import Storage, User
-from db.cache.dependency import get_cache
-from db.cache.protocol import Cache
-
-from src.db.storage.auth_db import PgConnector
-
-from core.logger import get_logger
 from core.config import security_settings
+from core.logger import get_logger
+from db.cache.dependency import get_cache
+from fastapi import Depends, HTTPException, status
+from fastapi.security.utils import get_authorization_scheme_param
+from jose import JWTError, jwt
+
+# from fastapi.security import OAuth2PasswordBearer
+from .bearers import OAuth2PasswordCookiesBearer
+from .models import TokenData
 
 logger = get_logger(__name__)
 
@@ -26,17 +23,7 @@ CREDENTIALS_EXCEPTION = HTTPException(
 )
 
 
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
+oauth2_scheme = OAuth2PasswordCookiesBearer(tokenUrl="v1/auth/token")
 
 
 def create_token(
@@ -58,6 +45,9 @@ def create_token(
 
 
 def decode_token(token: str):
+    if re.search(string=token.lower(), pattern="^bearer "):
+        _, token = get_authorization_scheme_param(token)
+
     payload = jwt.decode(
         token=token,
         key=security_settings.SECRET_KEY,
@@ -77,7 +67,7 @@ def decode_token(token: str):
 
 async def get_current_username_from_token(
     token: Annotated[str, Depends(oauth2_scheme)]
-):
+) -> TokenData:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -92,7 +82,7 @@ async def get_current_username_from_token(
     except JWTError:
         raise credentials_exception
 
-    return token_data.username
+    return token_data
 
 
 async def get_current_user_token(
@@ -101,6 +91,8 @@ async def get_current_user_token(
     return token
 
 
+# FIXME Кирилл, ручку следует перенести в другое место,
+# токен ничего не должен знать о кэше
 async def add_blacklist_token(
     token: Annotated[str, Depends(oauth2_scheme)],
     token_name: str,
@@ -112,6 +104,8 @@ async def add_blacklist_token(
     username = decoded_token.get("sub")
     token_ttl = decoded_token.get("exp")
 
+    # FIXME Кирилл, дублируется токен в кэше, нужно использовать другой подход.
+    # Например, хранить массив в {username}:{token_name} (redis уменнт это делать нативно).
     token_key = f"{username}:{token_name}:{token}"
 
     await cache.set(
@@ -121,6 +115,8 @@ async def add_blacklist_token(
     )
 
 
+# FIXME Кирилл, ручку следует перенести в другое место,
+# токен ничего не должен знать о кэше
 async def is_token_invalidated(
     token: Annotated[str, Depends(oauth2_scheme)],
     token_name: str,
@@ -132,6 +128,8 @@ async def is_token_invalidated(
     decoded_token = decode_token(token)
     username = decoded_token.get("sub")
 
+    # FIXME Кирилл, дублируется токен в кэше, нужно использовать другой подход.
+    # Например, хранить массив в {username}:{token_name} (redis уменнт это делать нативно).
     token_key = f"{username}:{token_name}:{token}"
 
     return await cache.exists(token_key) > 0

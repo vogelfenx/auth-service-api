@@ -1,10 +1,10 @@
 from logging import DEBUG, INFO
 from typing import Annotated
 from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from api.v1.deps import CurrentUserAnnotated
 
 from core.logger import get_logger
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from .models import Role, UserRole
 from .service import RoleService, get_role_service
@@ -19,7 +19,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def create_role(
-    role: Role,
+    role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
     """Create a new role."""
@@ -31,7 +31,7 @@ async def create_role(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    return {'uuid': created_role.id}
+    return {"uuid": created_role.id}
 
 
 @router.delete("/role/{role_id}")
@@ -52,7 +52,7 @@ async def delete_role(
 @router.put("/role/{role_id}")
 async def edit_role(
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
-    role: Role,
+    role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ):
     """Edit a role by id."""
