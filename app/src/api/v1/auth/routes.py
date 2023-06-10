@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
 from fastapi.security.utils import get_authorization_scheme_param
+from api.v1.deps import CurrenUserAnnotated
 
 from core.config import security_settings
 from core.logger import get_logger
@@ -149,11 +150,9 @@ async def logout(
 async def change_password(
     response: Response,
     request: Request,
-    current_user: Annotated[
-        StorageUserModel, Depends(get_current_username_from_token)
-    ],
     new_psw: Annotated[str, Query(description="New user password.")],
     old_psw: Annotated[str, Query(description="Old user password.")],
+    current_user: CurrenUserAnnotated,
     storage: Storage = Depends(get_storage),
 ):
     """Change password for user by id."""
@@ -200,9 +199,7 @@ async def change_password(
 
 @router.put("/user/edit")
 async def edit_common_user_info(
-    current_user: Annotated[
-        StorageUserModel, Depends(get_current_username_from_token)
-    ],
+    current_user: CurrenUserAnnotated,
     psw: Annotated[str, Query(description="User password.")],
     email: Annotated[str | None, Query(description="User email.")],
     full_name: Annotated[str | None, Query(description="User full name.")],
@@ -222,9 +219,7 @@ async def edit_common_user_info(
 
 @router.get("/user/history")
 async def get_user_history(
-    current_user: Annotated[
-        StorageUserModel, Depends(get_current_username_from_token)
-    ],
+    current_user: CurrenUserAnnotated,
     limit: Annotated[int | None, Query(description="User history limit")],
     storage: Storage = Depends(get_storage),
 ):
