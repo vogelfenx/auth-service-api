@@ -22,13 +22,15 @@ logger = get_logger(__name__, DEBUG)
 
 class PostgresStorage:
     def __init__(self) -> None:
-        self.engine = create_engine(
-            f"postgresql+psycopg2://{pg_conf.POSTGRES_USER}:"
-            f"{pg_conf.POSTGRES_PASSWORD}@"
-            f"{pg_conf.POSTGRES_HOST}:"
-            f"{pg_conf.POSTGRES_PORT}/"
-            f"{pg_conf.POSTGRES_DB}"
+        url = "{driver}://{user}:{password}@{host}:{port}/{database}".format(
+            driver="postgresql+psycopg2",
+            user=pg_conf.POSTGRES_USER,
+            password=pg_conf.POSTGRES_PASSWORD,
+            host=pg_conf.POSTGRES_HOST,
+            port=pg_conf.POSTGRES_PORT,
+            database=pg_conf.POSTGRES_DB,
         )
+        self.engine = create_engine(url)
         BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
@@ -71,7 +73,9 @@ class PostgresStorage:
             .where(User.username == username)
         )
         try:
-            return self.session.execute(stmt).all()
+            roles = self.session.execute(stmt).all()
+
+            return roles
         except Exception:
             self.session.rollback()
             raise Exception
