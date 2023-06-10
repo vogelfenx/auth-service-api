@@ -146,6 +146,7 @@ class PostgresStorage:
             self.session.execute(stmt)
         except Exception as e:
             self.session.rollback()
+            # FIXME Игорь, заменить print
             print(e)
             raise e
         finally:
@@ -324,8 +325,6 @@ class RoleConnector:
         user_profile = UserProfile(
             user_id=user_id,
             role_id=role_id,
-            # TODO: do we really need the permissions in UserRole?
-            permission_id="eda0b04e-6fda-4d7f-b88d-5bfb1a66f697",
         )
         try:
             self.session.add(user_profile)
