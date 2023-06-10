@@ -72,9 +72,10 @@ class PostgresStorage:
             .where(User.username == username)
         )
         try:
+            # FIXME Игорь, возврат функции не соответсвует аннотации.
             roles = self.session.execute(stmt).all()
-
             return roles
+
         except Exception:
             self.session.rollback()
             raise Exception
@@ -98,6 +99,7 @@ class PostgresStorage:
             .where(User.username == username)
         )
         try:
+            # FIXME Игорь, возврат функции не соответсвует аннотации.
             return self.session.execute(stmt).all()
         except Exception:
             self.session.rollback()
@@ -179,14 +181,17 @@ class PostgresStorage:
         Returns:
             bool user existence flag
         """
+        # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
         stmt = select(exists(1).where(User.username == username))
         try:
+            # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
             is_exists = self.session.execute(stmt).fetchone()[0]
         except Exception:
             self.session.rollback()
             raise Exception
         finally:
             self.session.commit()
+
         return is_exists
 
     def authenticate_user(
@@ -311,6 +316,7 @@ class RoleConnector:
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
+        # FIXME Игорь, здесь и в остальных местах прошу поправить формат строк
         logger.debug(
             f"Assign role with id {role_id} to user with id {user_id}",
         )
