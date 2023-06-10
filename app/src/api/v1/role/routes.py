@@ -2,9 +2,8 @@ from logging import DEBUG, INFO
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-
 from core.logger import get_logger
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from .models import Role, UserRole
 from .service import RoleService, get_role_service
@@ -31,7 +30,7 @@ async def create_role(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    return {'uuid': created_role.id}
+    return {"uuid": created_role.id}
 
 
 @router.delete("/role/{role_id}")

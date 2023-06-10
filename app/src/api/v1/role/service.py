@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import Depends
 
 from core.logger import get_logger
-from db.storage.protocol import RoleStorage
+from db.storage.protocol import RoleStorage, StorageRoleModel
 from db.storage.dependency import get_storage
 
 from .models import Role, UserRole
@@ -18,7 +18,7 @@ class RoleService:
     def __init__(self, storage: RoleStorage):
         self.storage = storage
 
-    def create_role(self, role: Role) -> Role:
+    def create_role(self, role: Role) -> StorageRoleModel:
         """Create a new role."""
         role = self.storage.create_role(**role.dict())
         return role

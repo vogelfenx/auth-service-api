@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine, select, update, insert, delete
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import Session
-from db.storage import protocol
 from logging import DEBUG
 from uuid import UUID
 
