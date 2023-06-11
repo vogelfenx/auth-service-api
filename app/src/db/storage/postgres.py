@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, select, update, insert, delete
+from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import Session
 from logging import DEBUG
@@ -9,7 +10,7 @@ from db.storage.models import (
     User,
     Role,
     UserProfile,
-    LoginHistory,
+    UserHistory,
     Permission,
 )
 from core.config import postgres_settings as pg_conf
@@ -72,9 +73,8 @@ class PostgresStorage:
             .where(User.username == username)
         )
         try:
-            # FIXME Игорь, возврат функции не соответсвует аннотации.
             roles = self.session.execute(stmt).all()
-            return roles
+            return [row.Role for row in roles]
 
         except Exception:
             self.session.rollback()
@@ -98,9 +98,10 @@ class PostgresStorage:
             .join(User, UserProfile.user_id == User.id)
             .where(User.username == username)
         )
+
+        permissions = self.session.execute(stmt).all()
         try:
-            # FIXME Игорь, возврат функции не соответсвует аннотации.
-            return self.session.execute(stmt).all()
+            return [row.Permission for row in permissions]
         except Exception:
             self.session.rollback()
             raise Exception
@@ -146,8 +147,7 @@ class PostgresStorage:
             self.session.execute(stmt)
         except Exception as e:
             self.session.rollback()
-            # FIXME Игорь, заменить print
-            print(e)
+            logger.error(e)
             raise e
         finally:
             self.session.commit()
@@ -182,11 +182,11 @@ class PostgresStorage:
         Returns:
             bool user existence flag
         """
-        # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
-        stmt = select(exists(1).where(User.username == username))
+        stmt = select(exists(1)
+                      .where(User.username == username))  # type: ignore
         try:
-            # FIXME Игорь, mypy ругается на Value of type "Optional[Row[Tuple[bool]]]" is not indexable.
-            is_exists = self.session.execute(stmt).fetchone()[0]
+            is_exists = (self.session.execute(stmt)
+                         .fetchone()[0])  # type: ignore
         except Exception:
             self.session.rollback()
             raise Exception
@@ -220,15 +220,25 @@ class PostgresStorage:
 
     def get_user_history(
         self, username: str, history_limit: int
-    ) -> list[LoginHistory]:
+    ) -> list[UserHistory]:
+        """
+        Get specified user's history.
+
+        Args:
+            username: name of specified user
+            history_limit: limit of user's event history to be fetched
+
+        Returns:
+            list of UserHistory class instances
+        """
         stmt = (
-            select(LoginHistory)
-            .join(User, LoginHistory.user_id == User.id)
+            select(UserHistory)
+            .join(User, UserHistory.user_id == User.id)
             .where(User.username == username)
             .limit(history_limit)
         )
 
-        return [row.LoginHistory for row in self.session.execute(stmt).all()]
+        return [row.UserHistory for row in self.session.execute(stmt).all()]
 
     def update_user_password(self, username: str, password: str):
         hashed_password = Hasher.get_password_hash(password=password)
@@ -237,6 +247,16 @@ class PostgresStorage:
             .where(User.username == username)
             .values(hashed_password=hashed_password)
         )
+        """
+        Update specified user's password.
+
+        Args:
+            username: name of specified user
+            password: new user password
+
+        Returns:
+            None
+        """
         try:
             self.session.execute(stmt)
         except Exception:
@@ -245,20 +265,47 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
-    def close(self):
-        """Close active database session"""
-        self.session.close()
+    def log_user_event(self, username: str, event_desc: str) -> None:
+        """
+        Log user event in log table.
+
+        Args:
+            username: name of specified user
+            event_desc: event description
+
+        Returns:
+            None
+        """
+        event_desc_col = (literal_column("'{0}'".format(event_desc))
+                          .label("user_event"))  # type: ignore
+        select_stmt = select(
+            User.id.label("user_id"),
+            event_desc_col
+            ).where(User.username == username)
+        insert_stmt = (insert(UserHistory)
+                       .from_select(["user_id", "user_event"], select_stmt)
+                       )
+        try:
+            self.session.execute(insert_stmt)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(e)
+            raise e
+        finally:
+            self.session.commit()
 
     def create_role(self, **kwargs) -> Role:
         """Create a new role."""
-        logger.debug(f"Insert role: {kwargs}")
+        logger.debug("Insert role: {0}".format(kwargs))
 
         created_role = None
         stmt = insert(Role).values(kwargs).returning(Role)
         try:
-            created_role = self.session.execute(stmt).fetchone()[0]
+            created_role = (self.session.execute(stmt)
+                            .fetchone()[0])  # type: ignore
             self.session.commit()
-            logger.debug(f"The role was inserted successfully: {created_role}")
+            logger.debug("The role was inserted successfully: {0}"
+                         .format(created_role))
         except Exception as e:
             logger.error(e)
             self.session.rollback()
@@ -268,13 +315,13 @@ class PostgresStorage:
 
     def delete_role(self, id: UUID) -> None:
         """Delete role by id."""
-        logger.debug(f"Delete role with id: {id}")
+        logger.debug("Delete role with id: {0}".format(id))
 
         stmt = delete(Role).where(Role.id == id)
         try:
             self.session.execute(stmt)
             self.session.commit()
-            logger.debug(f"Role with id {id} deleted successfully")
+            logger.debug("Role with id {0} deleted successfully".format(id))
         except Exception as e:
             logger.error(e)
             self.session.rollback()
@@ -282,13 +329,13 @@ class PostgresStorage:
 
     def edit_role(self, id: UUID, **kwargs) -> None:
         """Edit role by id."""
-        logger.debug(f"Edit a role with id: {id}")
+        logger.debug("Edit a role with id: {0}".format(id))
 
         stmt = update(Role).where(Role.id == id).values(**kwargs)
         try:
             self.session.execute(stmt)
             self.session.commit()
-            logger.debug(f"Role with id {id} edited successfully")
+            logger.debug("Role with id {0} edited successfully".format(id))
         except Exception as e:
             logger.error(e)
             self.session.rollback()
@@ -306,13 +353,13 @@ class PostgresStorage:
             logger.error(e)
             raise e
 
-        return roles
+        return [row.Role for row in roles]
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
-        # FIXME Игорь, здесь и в остальных местах прошу поправить формат строк
         logger.debug(
-            f"Assign role with id {role_id} to user with id {user_id}",
+            "Assign role with id {0} to user with id {1}"
+            .format(role_id, user_id),
         )
 
         user_profile = UserProfile(
@@ -330,3 +377,7 @@ class PostgresStorage:
             raise e
 
         return user_profile
+
+    def close(self):
+        """Close active database session"""
+        self.session.close()
