@@ -163,7 +163,7 @@ async def logout(
 @router.get("/user/me")
 async def user_me(
     current_user: CurrentUserAnnotated,
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ) -> ResponseUser:
     """Return current user."""
     user = storage.get_user(username=current_user.username)
@@ -192,13 +192,19 @@ async def change_password(
     access_token = request.cookies["access_token"]
     refresh_token = request.cookies["refresh_token"]
 
-    if await invalidate_token(access_token) and await invalidate_token(
-        refresh_token
-    ):
-        storage.update_user_password(
-            username=current_user.username,
-            password=new_psw,
-        )
+    await invalidate_token(
+        token=access_token,
+        token_name="access_token",
+    )
+    await invalidate_token(
+        token=refresh_token,
+        token_name="refresh_token",
+    )
+
+    storage.update_user_password(
+        username=current_user.username,
+        password=new_psw,
+    )
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -286,8 +292,14 @@ async def get_user_history(
 async def refresh(
     request: Request,
     response: Response,
+    storage: UserStorage = Depends(get_storage),
 ):
     old_refresh_token = request.cookies.get("refresh_token")
+    if not old_refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not found refresh_token. Access Denied.",
+        )
     schema, param = get_authorization_scheme_param(old_refresh_token)
 
     if not param:
@@ -305,6 +317,10 @@ async def refresh(
         )
 
     payload = decode_token(old_refresh_token)
+    token_data = TokenData.parse_obj(payload)
+    current_user = storage.get_user(username=token_data.username)
+    _roles = storage.get_user_roles(username=token_data.username)
+    roles = [role.role for role in _roles if not role.disabled]
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -315,7 +331,7 @@ async def refresh(
     )
 
     access_token = create_token(
-        data={"sub": payload.get("sub")},
+        data=TokenData(username=current_user.username, roles=roles),
         expires_delta=access_token_expires,
     )
 
@@ -325,7 +341,7 @@ async def refresh(
     )
 
     refresh_token = create_token(
-        data={"sub": payload.get("sub")},
+        data=TokenData(username=current_user.username, roles=roles),
         expires_delta=refresh_token_expires,
     )
 
