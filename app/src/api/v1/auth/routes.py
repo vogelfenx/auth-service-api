@@ -166,11 +166,20 @@ async def user_me(
     storage: UserStorage = Depends(get_storage),
 ) -> ResponseUser:
     """Return current user."""
-    user = storage.get_user(username=current_user.username)
+    try:
+        user = storage.get_user(username=current_user.username)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=" Username does not exist",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # BUG Кирилл, ручка не работает
     return ResponseUser(
-        **user.__dict__,
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
     )
 
 
