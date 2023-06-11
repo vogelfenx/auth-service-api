@@ -29,7 +29,7 @@ from security.token import (
 )
 from security.hasher import Hasher
 from security.token import is_token_invalidated
-from .models import UserAnnotated
+from .models import UserAnnotated, Password
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -42,7 +42,6 @@ async def signup(
     storage: Storage = Depends(get_storage),
 ):
     """Registration a user."""
-
     if storage.user_exists(user.username):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -56,6 +55,11 @@ async def signup(
         **user.dict(exclude={"password"}),
         hashed_password=hashed_password,
     )
+
+    storage.log_user_event(
+            username=user.username,
+            event_desc="Signup"
+            )
 
     return {"message": "The user has been created!"}
 
@@ -111,6 +115,11 @@ async def login_for_access_token(
         httponly=True,
     )
 
+    storage.log_user_event(
+            username=user.username,
+            event_desc="Token issuance"
+            )
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -122,6 +131,8 @@ async def login_for_access_token(
 async def logout(
     response: Response,
     request: Request,
+    current_user: CurrentUserAnnotated,
+    storage: Storage = Depends(get_storage),
 ):
     """Logout the current user.
 
@@ -143,6 +154,11 @@ async def logout(
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
 
+    storage.log_user_event(
+            username=current_user,
+            event_desc="Logout"
+        )
+
     return status.HTTP_200_OK
 
 
@@ -150,8 +166,8 @@ async def logout(
 async def change_password(
     response: Response,
     request: Request,
-    new_psw: Annotated[str, Query(description="New user password.")],
-    old_psw: Annotated[str, Query(description="Old user password.")],
+    old_psw: Annotated[str, Query(description='Old user password')],
+    new_psw: Annotated[str, Query(description='New user password')],
     current_user: CurrentUserAnnotated,
     storage: Storage = Depends(get_storage),
 ):
@@ -194,6 +210,11 @@ async def change_password(
         httponly=True,
     )
 
+    storage.log_user_event(
+            username=current_user,
+            event_desc="Changing password"
+            )
+
     return {"message": "User password has been updated!"}
 
 
@@ -232,10 +253,9 @@ async def get_user_history(
         storage: Storage class
 
     Returns:
-        List of LoginHistory class instances
+        List of UserHistory class instances
     """
 
-    # FIXME Игорь, пустой вывод, нужно поправить
     return storage.get_user_history(
         username=current_user.username,
         history_limit=limit,
