@@ -22,7 +22,7 @@ async def invalidate_token(
     cache = await get_cache()
     decoded_token = decode_token(token)
 
-    username = decoded_token.get("sub")
+    username = decoded_token.get("username")
     token_ttl = decoded_token.get("exp")
 
     token_key = _fromat_token_key_for_cache(
@@ -49,7 +49,7 @@ async def is_token_invalidated(
     cache = await get_cache()
 
     decoded_token = decode_token(token)
-    username = decoded_token.get("sub")
+    username = decoded_token.get("username")
 
     token_key = _fromat_token_key_for_cache(
         username=username,
