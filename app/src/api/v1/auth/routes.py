@@ -102,12 +102,12 @@ async def login_for_access_token(
     )
     response.set_cookie(
         key="access_token",
-        value=access_token,
+        value="Bearer {0}".format(access_token),
         httponly=True,
     )
     response.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value="Bearer {0}".format(refresh_token),
         httponly=True,
     )
 
