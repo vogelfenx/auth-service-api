@@ -316,6 +316,22 @@ class PostgresStorage:
 
         return created_role
 
+    def get_role_by_name(self, role_name: str):
+        """Get role by role name"""
+
+        stmt = select(Role).where(
+            Role.role == role_name,
+            Role.disabled == False,
+        )
+
+        try:
+            role = self.session.execute(stmt).one()[0]
+        except Exception:
+            self.session.rollback()
+            raise Exception
+
+        return role
+
     def delete_role(self, id: UUID) -> None:
         """Delete role by id."""
         logger.debug("Delete role with id: {0}".format(id))

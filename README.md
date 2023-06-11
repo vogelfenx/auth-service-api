@@ -18,4 +18,10 @@ Authentication Service repository
 6. Запустить проект
 ```docker-compose -f docker-compose.debug.yml up --build```
 
-7. Работу шаблона можно проерить по http://127.0.0.1:8000/api/openapi#/
+7. Для создания супер-пользователя с ролью `admin`, использовать следующую комманду
+
+   ```bash
+   python manage.py createadmin
+   ```
+
+8. Работу шаблона можно проверить по http://127.0.0.1:8000/api/openapi#/
