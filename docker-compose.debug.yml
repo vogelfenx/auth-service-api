@@ -1,5 +1,11 @@
 version: '3'
+
+volumes:
+  pg_auth_data:
+    name: pg_auth_data
+
 services:
+
   api:
     container_name: auth_api_service
     build:
@@ -27,7 +33,7 @@ services:
         "-c",
         "pip install debugpy && python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
       ]
-      
+
   redis:
     container_name: auth_redis_cache
     build:
@@ -38,12 +44,13 @@ services:
     ports:
       - "6379:6379"
 
-
   postgres:
     container_name: auth_postgres
     build:
       context: app/settings/docker/postgres
       dockerfile: dockerfile
+    volumes:
+      - pg_auth_data:/var/lib/postgresql/data/
     env_file:
       app/.env
     ports:
