@@ -6,7 +6,7 @@ from api.v1.deps import CurrentUserAnnotated
 from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from .models import Role, UserRole
+from .models import CreateRole, ResponseRole, UserRole
 from .service import RoleService, get_role_service
 
 logger = get_logger(__name__, DEBUG)
@@ -19,7 +19,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def create_role(
-    role: Role = Depends(Role),
+    role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
     """Create a new role."""
@@ -52,7 +52,7 @@ async def delete_role(
 @router.put("/role/{role_id}")
 async def edit_role(
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
-    role: Role = Depends(Role),
+    role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
 ):
     """Edit a role by id."""
@@ -64,7 +64,7 @@ async def edit_role(
         )
 
 
-@router.get("/roles", response_model=list[Role])
+@router.get("/roles", response_model=list[ResponseRole])
 async def fetch_roles(role_service: RoleService = Depends(get_role_service)):
     """Fetch all roles."""
 

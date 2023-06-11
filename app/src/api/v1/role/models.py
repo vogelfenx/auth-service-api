@@ -2,9 +2,18 @@ from pydantic import BaseModel
 from uuid import UUID
 
 
-class Role(BaseModel):
-    """Role schema representation."""
+class CreateRole(BaseModel):
+    """Role schema for Create and Update forms."""
 
+    role: str
+    description: str | None = None
+    disabled: bool = False
+
+
+class ResponseRole(BaseModel):
+    """Role schema for Response."""
+
+    id: UUID
     role: str
     description: str | None = None
     disabled: bool = False

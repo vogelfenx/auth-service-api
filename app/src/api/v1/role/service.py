@@ -7,7 +7,7 @@ from core.logger import get_logger
 from db.storage.protocol import RoleStorage, StorageRoleModel
 from db.storage.dependency import get_storage
 
-from .models import Role, UserRole
+from .models import CreateRole, ResponseRole, UserRole
 
 logger = get_logger(__name__, DEBUG)
 
@@ -18,7 +18,7 @@ class RoleService:
     def __init__(self, storage: RoleStorage):
         self.storage = storage
 
-    def create_role(self, role: Role) -> StorageRoleModel:
+    def create_role(self, role: CreateRole) -> StorageRoleModel:
         """Create a new role."""
         role = self.storage.create_role(**role.dict())
         return role
@@ -27,14 +27,14 @@ class RoleService:
         """Delete a role by id."""
         self.storage.delete_role(id=role_id)
 
-    def edit_role_by_id(self, role_id: UUID, role: Role) -> None:
+    def edit_role_by_id(self, role_id: UUID, role: CreateRole) -> None:
         """Edit a role by id."""
         self.storage.edit_role(id=role_id, **role.dict())
 
-    def fetch_roles(self) -> list[Role]:
+    def fetch_roles(self) -> list[CreateRole]:
         """Fetch all roles from a source."""
         roles = self.storage.fetch_roles()
-        roles = [Role(**role.__dict__) for role in roles]
+        roles = [ResponseRole(**role.__dict__) for role in roles]
         return roles
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserRole:
