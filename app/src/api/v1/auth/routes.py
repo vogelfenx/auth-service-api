@@ -167,6 +167,8 @@ async def user_me(
 ) -> ResponseUser:
     """Return current user."""
     user = storage.get_user(username=current_user.username)
+
+    # BUG Кирилл, ручка не работает
     return ResponseUser(
         **user.__dict__,
     )
@@ -214,11 +216,11 @@ async def change_password(
     )
 
     access_token = create_token(
-        data={"sub": current_user},
+        data=current_user,
         expires_delta=access_token_expires,
     )
     refresh_token = create_token(
-        data={"sub": current_user},
+        data=current_user,
         expires_delta=refresh_token_expires,
     )
     response.set_cookie(
@@ -233,7 +235,7 @@ async def change_password(
     )
 
     storage.log_user_event(
-        username=current_user,
+        username=current_user.username,
         event_desc="Changing password",
     )
 
