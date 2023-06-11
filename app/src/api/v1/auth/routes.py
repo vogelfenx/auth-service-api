@@ -261,7 +261,9 @@ async def edit_common_user_info(
     storage: UserStorage = Depends(get_storage),
 ):
     """Change login or password for user by username."""
-    if not storage.authenticate_user(username=current_user, password=psw):
+    if not storage.authenticate_user(
+        username=current_user.username, password=psw
+    ):
         return status.HTTP_400_BAD_REQUEST
 
     user_info = {
