@@ -21,7 +21,9 @@ class RedisCache:
         port: int | None = redis_settings.REDIS_PORT,
     ) -> None:
         logger.debug(
-            f"Initialize Redis connection on host={host}, port={port}",
+            "Initialize Redis connection on host=%s, port=%s",
+            host,
+            port,
         )
         self.redis = Redis(
             host=host,
@@ -30,7 +32,7 @@ class RedisCache:
 
     async def get(self, key: str) -> Any | None:
         """Get value by key."""
-        logger.debug(f"Get value from key '{key}'")
+        logger.debug("Get value from key '%s'", key)
 
         key_value = await self.redis.get(name=key)
 
@@ -46,15 +48,21 @@ class RedisCache:
         ttl: float | timedelta | None = None,
     ) -> None:
         """Set key-value pair."""
-        # FIXME Кирилл, здесь и в остальных местах поправить форматирование строк
         logger.debug(
-            f"Set key '{key}' to value {key_value} with expiration {ttl}'",
+            "Set key %s to value %s with expiration %s",
+            key,
+            key_value,
+            ttl,
         )
         await self.redis.set(name=key, value=key_value, ex=ttl)
 
     async def hget(self, name: str, key: str) -> str | None:
         """Get value from key within hash name."""
-        logger.debug(f"Get value from key '{key}' within hash '{name}'.")
+        logger.debug(
+            "Get value from key %s within hash %s.",
+            key,
+            name,
+        )
 
         key_value = await self.redis.hget(name=name, key=key)
 
@@ -65,7 +73,11 @@ class RedisCache:
 
     async def hset(self, name: str, key: str, key_value: Any) -> None:
         """Set key-value pair with hash name."""
-        logger.debug(f"Set value by key '{key}' within hash '{name}'.")
+        logger.debug(
+            "Set value by key %s within hash %s.",
+            key,
+            name,
+        )
 
         key_value = await self.redis.hset(
             name=name,
@@ -78,18 +90,28 @@ class RedisCache:
 
         Returns the number of keys that were deleted.
         """
-        logger.debug(f"Delete key(s) {keys}.")
+        logger.debug(
+            "Delete key(s) %s.",
+            keys,
+        )
 
         return self.redis.delete(*keys)
 
     async def exists(self, *keys: list[str]) -> int:
         """Return counter of key(s) if key(s) exist(s)."""
-        logger.debug(f"Return counter of key(s) {keys} if key(s) exist(s).")
+        logger.debug(
+            "Return counter of key(s) %s if key(s) exist(s).",
+            keys,
+        )
         return await self.redis.exists(*keys)
 
     async def expire(self, key: str, seconds: int | timedelta) -> None:
         """Set expire time in seconds."""
-        logger.debug(f"Set TTL on key '{key}' for {seconds} seconds.")
+        logger.debug(
+            "Set TTL on key '%s' for %s seconds.",
+            key,
+            seconds,
+        )
         await self.redis.expire(
             name=key,
             time=seconds,

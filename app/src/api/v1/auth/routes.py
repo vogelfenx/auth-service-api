@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi.security.utils import get_authorization_scheme_param
 from api.v1.deps import CurrentUserAnnotated
 
+
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
@@ -19,13 +20,13 @@ from fastapi import (
 from fastapi.security import OAuth2PasswordRequestForm
 from security.models import TokenData
 from security.token import (
-    add_blacklist_token,
     create_token,
     decode_token,
 )
 from security.hasher import Hasher
-from security.token import is_token_invalidated
-from .models import UserAnnotated
+
+from .service import invalidate_token, is_token_invalidated
+from .models import ResponseUser, User, UserAnnotated, Password
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -142,11 +143,11 @@ async def logout(
     access_token = request.cookies["access_token"]
     refresh_token = request.cookies["refresh_token"]
 
-    await add_blacklist_token(
+    await invalidate_token(
         token=access_token,
         token_name="access_token",
     )
-    await add_blacklist_token(
+    await invalidate_token(
         token=refresh_token,
         token_name="refresh_token",
     )
@@ -157,6 +158,18 @@ async def logout(
     storage.log_user_event(username=current_user.username, event_desc="Logout")
 
     return status.HTTP_200_OK
+
+
+@router.get("/user/me")
+async def user_me(
+    current_user: CurrentUserAnnotated,
+    storage: Storage = Depends(get_storage),
+) -> ResponseUser:
+    """Return current user."""
+    user = storage.get_user(username=current_user.username)
+    return ResponseUser(
+        **user.__dict__,
+    )
 
 
 @router.put("/user/password")
@@ -179,7 +192,7 @@ async def change_password(
     access_token = request.cookies["access_token"]
     refresh_token = request.cookies["refresh_token"]
 
-    if await add_blacklist_token(access_token) and await add_blacklist_token(
+    if await invalidate_token(access_token) and await invalidate_token(
         refresh_token
     ):
         storage.update_user_password(
@@ -306,7 +319,7 @@ async def refresh(
         expires_delta=access_token_expires,
     )
 
-    await add_blacklist_token(
+    await invalidate_token(
         token=old_refresh_token,
         token_name="refresh_token",
     )

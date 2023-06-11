@@ -356,7 +356,7 @@ class PostgresStorage:
             logger.error(e)
             raise e
 
-        return [row.Role for row in roles]
+        return roles
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
