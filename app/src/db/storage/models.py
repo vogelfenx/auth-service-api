@@ -30,9 +30,14 @@ class User(BaseTable):
     disabled: Mapped[bool]
     hashed_password: Mapped[str]
 
-    logins: Mapped[List["LoginHistory"]] = relationship(cascade="all, delete")
+    logins: Mapped[List["UserHistory"]] = relationship(cascade="all, delete")
     user_profile: Mapped[List["UserProfile"]] = relationship(
         cascade="all, delete"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("username", name="uniq_username"),
+        Index("idx_username", "username"),
     )
 
     def __repr__(self) -> str:
@@ -78,10 +83,11 @@ class Permission(BaseTable):
         return f"Permission(name={self.permission_name}, disabled={self.disabled})"
 
 
-class LoginHistory(BaseTable):
-    __tablename__ = "login_history"
+class UserHistory(BaseTable):
+    __tablename__ = "user_history"
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id"))
+    user_event: Mapped[Optional[str]]
 
-    def some(self):
-        return {"user_id": self.user_id, "created": self.created, "modified": self.modified}
+    def __repr__(self) -> str:
+        return f"User event: {self.user_event}, timestamp: {self.created}"

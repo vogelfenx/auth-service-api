@@ -70,3 +70,6 @@ class UserStorage(typing.Protocol):
 
     def user_exists(self) -> bool:
         ...
+
+    def log_user_event(self, username: str, event_desc: str) -> None:
+        ...
