@@ -66,9 +66,6 @@ class Role(BaseTable):
         Index("idx_role", "role"),
     )
 
-    def __repr__(self) -> str:
-        return f"Role(name={self.role}, disabled={self.disabled})"
-
 
 class Permission(BaseTable):
     __tablename__ = "permission"
