@@ -7,27 +7,24 @@ from api.v1.deps import CurrentUserAnnotated
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
-from db.storage.protocol import Storage, StorageUserModel
+from db.storage.protocol import RoleStorage, UserStorage
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Header,
-    Path,
     Query,
     Request,
     Response,
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
-from security.models import Token
+from security.models import TokenData
 from security.token import (
     create_token,
     decode_token,
-    get_current_username_from_token,
-    oauth2_scheme,
 )
 from security.hasher import Hasher
+
 from .service import invalidate_token, is_token_invalidated
 from .models import ResponseUser, User, UserAnnotated, Password
 
@@ -39,7 +36,7 @@ router = APIRouter()
 @router.post("/signup")
 async def signup(
     user: UserAnnotated,
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ):
     """Registration a user."""
     if storage.user_exists(user.username):
@@ -56,10 +53,7 @@ async def signup(
         hashed_password=hashed_password,
     )
 
-    storage.log_user_event(
-            username=user.username,
-            event_desc="Signup"
-            )
+    storage.log_user_event(username=user.username, event_desc="Signup")
 
     return {"message": "The user has been created!"}
 
@@ -68,10 +62,10 @@ async def signup(
 async def login_for_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    storage: Storage = Depends(get_storage),
+    user_storage: UserStorage = Depends(get_storage),
 ):
     try:
-        user = storage.authenticate_user(
+        user = user_storage.authenticate_user(
             username=form_data.username,
             password=form_data.password,
         )
@@ -89,6 +83,8 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    _roles = user_storage.get_user_roles(user.username)
+    roles = [role.role for role in _roles if not role.disabled]
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
@@ -97,11 +93,17 @@ async def login_for_access_token(
     )
 
     access_token = create_token(
-        data={"sub": user.username},
+        data=TokenData(
+            username=user.username,
+            roles=roles,
+        ),
         expires_delta=access_token_expires,
     )
     refresh_token = create_token(
-        data={"sub": user.username},
+        data=TokenData(
+            username=user.username,
+            roles=roles,
+        ),
         expires_delta=refresh_token_expires,
     )
     response.set_cookie(
@@ -115,10 +117,9 @@ async def login_for_access_token(
         httponly=True,
     )
 
-    storage.log_user_event(
-            username=user.username,
-            event_desc="Token issuance"
-            )
+    user_storage.log_user_event(
+        username=user.username, event_desc="Token issuance"
+    )
 
     return {
         "access_token": access_token,
@@ -132,7 +133,7 @@ async def logout(
     response: Response,
     request: Request,
     current_user: CurrentUserAnnotated,
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ):
     """Logout the current user.
 
@@ -154,10 +155,7 @@ async def logout(
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
 
-    storage.log_user_event(
-            username=current_user,
-            event_desc="Logout"
-        )
+    storage.log_user_event(username=current_user.username, event_desc="Logout")
 
     return status.HTTP_200_OK
 
@@ -178,14 +176,17 @@ async def user_me(
 async def change_password(
     response: Response,
     request: Request,
-    old_psw: Annotated[str, Query(description='Old user password')],
-    new_psw: Annotated[str, Query(description='New user password')],
+    old_psw: Annotated[str, Query(description="Old user password")],
+    new_psw: Annotated[str, Query(description="New user password")],
     current_user: CurrentUserAnnotated,
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ):
     """Change password for user by id."""
 
-    if not storage.authenticate_user(username=current_user, password=old_psw):
+    if not storage.authenticate_user(
+        username=current_user.username,
+        password=old_psw,
+    ):
         return status.HTTP_401_UNAUTHORIZED
 
     access_token = request.cookies["access_token"]
@@ -194,7 +195,10 @@ async def change_password(
     if await invalidate_token(access_token) and await invalidate_token(
         refresh_token
     ):
-        storage.update_user_password(username=current_user, password=new_psw)
+        storage.update_user_password(
+            username=current_user.username,
+            password=new_psw,
+        )
 
     access_token_expires = timedelta(
         minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -223,9 +227,9 @@ async def change_password(
     )
 
     storage.log_user_event(
-            username=current_user,
-            event_desc="Changing password"
-            )
+        username=current_user,
+        event_desc="Changing password",
+    )
 
     return {"message": "User password has been updated!"}
 
@@ -237,13 +241,17 @@ async def edit_common_user_info(
     email: Annotated[str | None, Query(description="User email.")],
     full_name: Annotated[str | None, Query(description="User full name.")],
     disabled: Annotated[bool, Query(description="Disabled user flag.")],
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ):
     """Change login or password for user by username."""
     if not storage.authenticate_user(username=current_user, password=psw):
         return status.HTTP_400_BAD_REQUEST
 
-    user_info = {"email": email, "full_name": full_name, "disabled": disabled}
+    user_info = {
+        "email": email,
+        "full_name": full_name,
+        "disabled": disabled,
+    }
 
     storage.edit_user(username=current_user.username, **user_info)
 
@@ -254,7 +262,7 @@ async def edit_common_user_info(
 async def get_user_history(
     current_user: CurrentUserAnnotated,
     limit: Annotated[int | None, Query(description="User history limit")],
-    storage: Storage = Depends(get_storage),
+    storage: UserStorage = Depends(get_storage),
 ):
     """
     Get user login history

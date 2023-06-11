@@ -26,15 +26,16 @@ oauth2_scheme = OAuth2PasswordCookiesBearer(tokenUrl="v1/auth/token")
 
 
 def create_token(
-    data: dict,
+    data: TokenData,
     expires_delta: timedelta | None = None,
 ):
-    to_encode = data.copy()
+    to_encode = dict(data)
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
+
     encoded_jwt = jwt.encode(
         claims=to_encode,
         key=security_settings.SECRET_KEY,
@@ -74,10 +75,10 @@ async def get_current_username_from_token(
     )
     try:
         payload = decode_token(token)
-        username: str | None = payload.get("sub")
+        username: str | None = payload.get("username")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData.parse_obj(payload)
     except JWTError:
         raise credentials_exception
 
