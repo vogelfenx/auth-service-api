@@ -29,7 +29,7 @@ from security.token import (
 )
 from security.hasher import Hasher
 from .service import invalidate_token, is_token_invalidated
-from .models import UserAnnotated, Password
+from .models import ResponseUser, User, UserAnnotated, Password
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -160,6 +160,18 @@ async def logout(
         )
 
     return status.HTTP_200_OK
+
+
+@router.get("/user/me")
+async def user_me(
+    current_user: CurrentUserAnnotated,
+    storage: Storage = Depends(get_storage),
+) -> ResponseUser:
+    """Return current user."""
+    user = storage.get_user(username=current_user.username)
+    return ResponseUser(
+        **user.__dict__,
+    )
 
 
 @router.put("/user/password")
