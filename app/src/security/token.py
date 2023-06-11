@@ -4,7 +4,6 @@ from typing import Annotated
 
 from core.config import security_settings
 from core.logger import get_logger
-from db.cache.dependency import get_cache
 from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
@@ -89,47 +88,3 @@ async def get_current_user_token(
     token: Annotated[str, Depends(oauth2_scheme)]
 ):
     return token
-
-
-# FIXME Кирилл, ручку следует перенести в другое место,
-# токен ничего не должен знать о кэше
-async def add_blacklist_token(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    token_name: str,
-) -> None:
-    """Add a token to blacklist to invalidate it."""
-    cache = await get_cache()
-    decoded_token = decode_token(token)
-
-    username = decoded_token.get("sub")
-    token_ttl = decoded_token.get("exp")
-
-    # FIXME Кирилл, дублируется токен в кэше, нужно использовать другой подход.
-    # Например, хранить массив в {username}:{token_name} (redis уменнт это делать нативно).
-    token_key = f"{username}:{token_name}:{token}"
-
-    await cache.set(
-        key=token_key,
-        key_value=token,
-        ttl=token_ttl,
-    )
-
-
-# FIXME Кирилл, ручку следует перенести в другое место,
-# токен ничего не должен знать о кэше
-async def is_token_invalidated(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    token_name: str,
-) -> bool:
-    """Check if token is in blacklist."""
-
-    cache = await get_cache()
-
-    decoded_token = decode_token(token)
-    username = decoded_token.get("sub")
-
-    # FIXME Кирилл, дублируется токен в кэше, нужно использовать другой подход.
-    # Например, хранить массив в {username}:{token_name} (redis уменнт это делать нативно).
-    token_key = f"{username}:{token_name}:{token}"
-
-    return await cache.exists(token_key) > 0
