@@ -6,7 +6,8 @@ from api.v1.deps import CurrentUserAnnotated
 from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from .models import Role, UserRole
+from .utils import valudate_admin_role
+from .models import Role
 from .service import RoleService, get_role_service
 
 logger = get_logger(__name__, DEBUG)
@@ -19,11 +20,13 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def create_role(
+    current_user: CurrentUserAnnotated,
     role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
     """Create a new role."""
 
+    valudate_admin_role(current_user.roles)
     try:
         created_role = role_service.create_role(role=role)
     except Exception:
@@ -36,10 +39,12 @@ async def create_role(
 
 @router.delete("/role/{role_id}")
 async def delete_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to delete")],
     role_service: RoleService = Depends(get_role_service),
 ) -> None:
     """Delete a role by id."""
+    valudate_admin_role(current_user.roles)
 
     try:
         role_service.delete_role_by_id(role_id=role_id)
@@ -51,11 +56,14 @@ async def delete_role(
 
 @router.put("/role/{role_id}")
 async def edit_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
     role: Role = Depends(Role),
     role_service: RoleService = Depends(get_role_service),
 ):
     """Edit a role by id."""
+    valudate_admin_role(current_user.roles)
+
     try:
         role_service.edit_role_by_id(role_id=role_id, role=role)
     except Exception:
@@ -65,7 +73,10 @@ async def edit_role(
 
 
 @router.get("/roles", response_model=list[Role])
-async def fetch_roles(role_service: RoleService = Depends(get_role_service)):
+async def fetch_roles(
+    current_user: CurrentUserAnnotated,
+    role_service: RoleService = Depends(get_role_service),
+):
     """Fetch all roles."""
 
     return role_service.fetch_roles()
@@ -73,20 +84,21 @@ async def fetch_roles(role_service: RoleService = Depends(get_role_service)):
 
 @router.post(
     "/assign",
-    status_code=status.HTTP_200_OK,
-    response_model=UserRole,
+    status_code=status.HTTP_201_CREATED,
 )
 async def assign_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Query(description="A role id.")],
     user_id: Annotated[UUID, Query(description="A user id.")],
     role_service: RoleService = Depends(get_role_service),
 ):
     """Assign a role to a user."""
-    user_role = role_service.assign_role_to_user(
+    valudate_admin_role(current_user.roles)
+
+    _ = role_service.assign_role_to_user(
         role_id=role_id,
         user_id=user_id,
     )
-    return user_role
 
 
 @router.post(

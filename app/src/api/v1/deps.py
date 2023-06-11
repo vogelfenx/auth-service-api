@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from db.storage.protocol import StorageUserModel
 from fastapi import Depends
 from security.token import get_current_username_from_token
+from security.models import TokenData
 
 CurrentUserAnnotated = Annotated[
-    StorageUserModel, Depends(get_current_username_from_token)
+    TokenData, Depends(get_current_username_from_token)
 ]

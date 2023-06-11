@@ -11,7 +11,6 @@ from db.storage.models import (
     Role,
     UserProfile,
     UserHistory,
-    Permission,
 )
 from core.config import postgres_settings as pg_conf
 from core.logger import get_logger
@@ -82,31 +81,31 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
-    def get_user_permissions(self, username: str) -> list[Permission]:
-        """
-        Get permissions for specified user.
+    # def get_user_permissions(self, username: str) -> list[Permission]:
+    #     """
+    #     Get permissions for specified user.
 
-        Args:
-            username: name of specified user
+    #     Args:
+    #         username: name of specified user
 
-        Returns:
-            list of Permission's class instances
-        """
-        stmt = (
-            select(Permission)
-            .join(UserProfile, Permission.id == UserProfile.permission_id)
-            .join(User, UserProfile.user_id == User.id)
-            .where(User.username == username)
-        )
+    #     Returns:
+    #         list of Permission's class instances
+    #     """
+    #     stmt = (
+    #         select(Permission)
+    #         .join(UserProfile, Permission.id == UserProfile.permission_id)
+    #         .join(User, UserProfile.user_id == User.id)
+    #         .where(User.username == username)
+    #     )
 
-        permissions = self.session.execute(stmt).all()
-        try:
-            return [row.Permission for row in permissions]
-        except Exception:
-            self.session.rollback()
-            raise Exception
-        finally:
-            self.session.commit()
+    #     permissions = self.session.execute(stmt).all()
+    #     try:
+    #         return [row.Permission for row in permissions]
+    #     except Exception:
+    #         self.session.rollback()
+    #         raise Exception
+    #     finally:
+    #         self.session.commit()
 
     def set_password(self, username: str, h_password: str) -> None:
         """
@@ -182,11 +181,13 @@ class PostgresStorage:
         Returns:
             bool user existence flag
         """
-        stmt = select(exists(1)
-                      .where(User.username == username))  # type: ignore
+        stmt = select(
+            exists(1).where(User.username == username)
+        )  # type: ignore
         try:
-            is_exists = (self.session.execute(stmt)
-                         .fetchone()[0])  # type: ignore
+            is_exists = self.session.execute(stmt).fetchone()[
+                0
+            ]  # type: ignore
         except Exception:
             self.session.rollback()
             raise Exception
@@ -276,15 +277,15 @@ class PostgresStorage:
         Returns:
             None
         """
-        event_desc_col = (literal_column("'{0}'".format(event_desc))
-                          .label("user_event"))  # type: ignore
-        select_stmt = select(
-            User.id.label("user_id"),
-            event_desc_col
-            ).where(User.username == username)
-        insert_stmt = (insert(UserHistory)
-                       .from_select(["user_id", "user_event"], select_stmt)
-                       )
+        event_desc_col = literal_column("'{0}'".format(event_desc)).label(
+            "user_event"
+        )  # type: ignore
+        select_stmt = select(User.id.label("user_id"), event_desc_col).where(
+            User.username == username
+        )
+        insert_stmt = insert(UserHistory).from_select(
+            ["user_id", "user_event"], select_stmt
+        )
         try:
             self.session.execute(insert_stmt)
         except Exception as e:
@@ -301,11 +302,13 @@ class PostgresStorage:
         created_role = None
         stmt = insert(Role).values(kwargs).returning(Role)
         try:
-            created_role = (self.session.execute(stmt)
-                            .fetchone()[0])  # type: ignore
+            created_role = self.session.execute(stmt).fetchone()[
+                0
+            ]  # type: ignore
             self.session.commit()
-            logger.debug("The role was inserted successfully: {0}"
-                         .format(created_role))
+            logger.debug(
+                "The role was inserted successfully: {0}".format(created_role)
+            )
         except Exception as e:
             logger.error(e)
             self.session.rollback()
@@ -358,8 +361,9 @@ class PostgresStorage:
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
         logger.debug(
-            "Assign role with id {0} to user with id {1}"
-            .format(role_id, user_id),
+            "Assign role with id {0} to user with id {1}".format(
+                role_id, user_id
+            ),
         )
 
         user_profile = UserProfile(

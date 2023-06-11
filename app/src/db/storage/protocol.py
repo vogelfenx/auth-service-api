@@ -54,10 +54,10 @@ class UserStorage(typing.Protocol):
     def get_user_roles(self, username: str) -> list[StorageRoleModel]:
         ...
 
-    def get_user_permissions(
-        self, username: str
-    ) -> list[StoragePermissionModel]:
-        ...
+    # def get_user_permissions(
+    #     self, username: str
+    # ) -> list[StoragePermissionModel]:
+    #     ...
 
     def set_password(self, username: str, h_password: str):
         ...
@@ -72,4 +72,9 @@ class UserStorage(typing.Protocol):
         ...
 
     def log_user_event(self, username: str, event_desc: str) -> None:
+        ...
+
+    def authenticate_user(
+        self, username: str, password: str
+    ) -> StorageUserModel:
         ...

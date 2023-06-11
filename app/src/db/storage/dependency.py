@@ -1,8 +1,8 @@
-from .protocol import Storage
+from .protocol import UserStorage
 
-storage: Storage | None = None
+storage: UserStorage | None = None
 
 
-async def get_storage() -> Storage | None:
+async def get_storage() -> UserStorage | None:
     """For dependency."""
     return storage
