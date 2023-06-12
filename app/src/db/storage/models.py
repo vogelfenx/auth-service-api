@@ -49,7 +49,6 @@ class UserProfile(BaseTable):
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id"))
     role_id: Mapped[UUID] = mapped_column(ForeignKey("role.id"))
-    # permission_id: Mapped[UUID] = mapped_column(ForeignKey("permission.id"))
 
 
 class Role(BaseTable):
@@ -65,19 +64,6 @@ class Role(BaseTable):
         UniqueConstraint("role", name="uniq_role"),
         Index("idx_role", "role"),
     )
-
-
-# class Permission(BaseTable):
-#     __tablename__ = "permission"
-
-#     permission_name: Mapped[str]
-#     disabled: Mapped[bool]
-#     description: Mapped[Optional[str]]
-
-#     permission_participant: Mapped[List["UserProfile"]] = relationship()
-
-#     def __repr__(self) -> str:
-#         return f"Permission(name={self.permission_name}, disabled={self.disabled})"
 
 
 class UserHistory(BaseTable):

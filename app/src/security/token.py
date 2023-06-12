@@ -8,7 +8,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 
-# from fastapi.security import OAuth2PasswordBearer
 from .bearers import OAuth2PasswordCookiesBearer
 from .models import TokenData
 

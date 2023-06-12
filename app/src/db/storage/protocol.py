@@ -54,11 +54,6 @@ class UserStorage(typing.Protocol):
     def get_user_roles(self, username: str) -> list[StorageRoleModel]:
         ...
 
-    # def get_user_permissions(
-    #     self, username: str
-    # ) -> list[StoragePermissionModel]:
-    #     ...
-
     def set_password(self, username: str, h_password: str):
         ...
 
