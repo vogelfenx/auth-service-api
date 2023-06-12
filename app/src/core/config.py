@@ -14,7 +14,7 @@ class CommonSettings(BaseSettings):
     # Корень проекта
     file_path = os.path.abspath(__file__)
     dir_path = os.path.dirname(file_path)
-    BASE_DIR = os.path.dirname(dir_path)
+    base_dir = os.path.dirname(dir_path)
 
     class Config:
         env_file = "../.env"
