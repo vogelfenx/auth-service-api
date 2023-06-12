@@ -1,13 +1,13 @@
 from fastapi import Depends, HTTPException, status
+from api.v1.deps import CurrentUserAnnotated
 
 from security.token import get_current_username_from_token
 from functools import wraps
 from fastapi import status, HTTPException
 
 
-def validate_roles(
+def role_required(
     roles: set[str],
-    current_user=Depends(get_current_username_from_token),
 ):
     """
     Raise an error if user does not have one of roles (user must have at least one role from the list).
@@ -16,20 +16,24 @@ def validate_roles(
         roles: a list of appropritiated roles.
     """
 
-    def _validate_roles(func):
-        current_roles = current_user.roles
-        if len(roles.intersection(current_roles)) <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User must be included in at least one role: {roles}.".format(
-                    roles=",".join(roles)
-                ),
-            )
-
+    def decorator(func):
         @wraps(func)
-        def pn(*args, **kwargs):
-            return func(*args, **kwargs)
+        async def wrapper(
+            current_user: CurrentUserAnnotated,
+            *args,
+            **kwargs,
+        ):
+            current_roles = current_user.roles
+            if len(roles.intersection(current_roles)) <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User must be included in at least one role: {roles}.".format(
+                        roles=",".join(roles)
+                    ),
+                )
 
-        return pn
+            return await func(*args, **kwargs)
 
-    return _validate_roles
+        return wrapper
+
+    return decorator

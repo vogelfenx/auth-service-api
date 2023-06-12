@@ -6,21 +6,20 @@ from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from .models import CreateRole, ResponseRole
-from .utils import validate_roles
+from .utils import role_required
 from .service import RoleService, get_role_service
 
 logger = get_logger(__name__, DEBUG)
 
 router = APIRouter()
 
-
-@validate_roles(roles={"admin"})
 @router.post(
     "/",
     status_code=status.HTTP_200_OK,
     summary="Create a new role",
     response_description="Created role's ID.",
 )
+@role_required(roles={"admin"})
 async def create_role(
     role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
@@ -36,11 +35,11 @@ async def create_role(
     return {"uuid": UUID(created_role.id)}
 
 
-@validate_roles(roles={"admin"})
 @router.delete(
     "/{role_id}",
     summary="Delete a role",
 )
+@role_required(roles={"admin"})
 async def delete_role(
     role_id: Annotated[UUID, Path(description="ID of the role to delete")],
     role_service: RoleService = Depends(get_role_service),
@@ -54,11 +53,11 @@ async def delete_role(
         )
 
 
-@validate_roles(roles={"admin"})
 @router.put(
     "/{role_id}",
     summary="Edit a role",
 )
+@role_required(roles={"admin"})
 async def edit_role(
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
     role: CreateRole = Depends(CreateRole),
@@ -73,12 +72,12 @@ async def edit_role(
         )
 
 
-@validate_roles(roles={"admin"})
 @router.get(
     "/all",
     summary="Get all roles",
     response_model=list[ResponseRole],
 )
+@role_required(roles={"admin"})
 async def fetch_roles(
     role_service: RoleService = Depends(get_role_service),
 ):
@@ -86,12 +85,12 @@ async def fetch_roles(
     return role_service.fetch_roles()
 
 
-@validate_roles(roles={"admin"})
 @router.post(
     "/assign",
     summary="Assign a role to a user.",
     status_code=status.HTTP_201_CREATED,
 )
+@role_required(roles={"admin"})
 async def assign_role(
     role_id: Annotated[UUID, Query(description="A role id.")],
     user_id: Annotated[UUID, Query(description="A user id.")],
