@@ -8,11 +8,16 @@ ENV PYTHONPATH /opt/app
 
 COPY requirements.txt requirements.txt
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends netcat
+
 RUN  pip install --upgrade pip \
      && pip install -r requirements.txt --no-cache-dir
 
-COPY ./settings/docker/fastapi/run_gunicorn.sh run_gunicorn.sh
+COPY ./settings/docker/fastapi/*.sh .
+
 COPY src src
-# COPY tests tests
+COPY alembic alembic
+COPY alembic.ini alembic.ini
 
 ENTRYPOINT ["/bin/bash", "./run_gunicorn.sh"]

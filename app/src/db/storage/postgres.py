@@ -30,7 +30,7 @@ class PostgresStorage:
             database=pg_conf.POSTGRES_DB,
         )
         self.engine = create_engine(url)
-        BaseTable.metadata.create_all(self.engine)
+        # BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
     def get_user(self, username: str) -> User:
