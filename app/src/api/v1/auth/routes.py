@@ -82,10 +82,10 @@ async def login_for_access_token(
     _roles = user_storage.get_user_roles(user.username)
     roles = [role.role for role in _roles if not role.disabled]  # type: ignore
     access_token_expires = timedelta(
-        minutes=security_settings.access_token_expire_minute,
+        minutes=security_settings.access_token_expire_minutes,
     )
     refresh_token_expires = timedelta(
-        minutes=security_settings.refresh_token_expire_minute,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(
@@ -217,10 +217,10 @@ async def change_password(
     )
 
     access_token_expires = timedelta(
-        minutes=security_settings.access_token_expire_minute,
+        minutes=security_settings.access_token_expire_minutes,
     )
     refresh_token_expires = timedelta(
-        minutes=security_settings.refresh_token_expire_minute,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(
@@ -335,11 +335,11 @@ async def refresh(
     roles = [role.role for role in _roles if not role.disabled]
 
     access_token_expires = timedelta(
-        minutes=security_settings.access_token_expire_minute,
+        minutes=security_settings.access_token_expire_minutes,
     )
 
     refresh_token_expires = timedelta(
-        minutes=security_settings.refresh_token_expire_minute,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(

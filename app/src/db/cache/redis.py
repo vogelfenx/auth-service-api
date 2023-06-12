@@ -95,7 +95,7 @@ class RedisCache:
             keys,
         )
 
-        return self.redis.delete(*keys)
+        return await self.redis.delete(*keys)
 
     async def exists(self, *keys: list[str]) -> int:
         """Return counter of key(s) if key(s) exist(s)."""

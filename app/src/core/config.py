@@ -54,8 +54,8 @@ class SecuritySettings(CommonSettings):
 
     secret_key: str
     algorithm: str
-    access_token_expire_minute: int
-    refresh_token_expire_minute: int
+    access_token_expire_minutes: int
+    refresh_token_expire_minutes: int
 
 
 api_settings = ApiSettings()  # type: ignore
