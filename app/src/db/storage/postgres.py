@@ -81,32 +81,6 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
-    # def get_user_permissions(self, username: str) -> list[Permission]:
-    #     """
-    #     Get permissions for specified user.
-
-    #     Args:
-    #         username: name of specified user
-
-    #     Returns:
-    #         list of Permission's class instances
-    #     """
-    #     stmt = (
-    #         select(Permission)
-    #         .join(UserProfile, Permission.id == UserProfile.permission_id)
-    #         .join(User, UserProfile.user_id == User.id)
-    #         .where(User.username == username)
-    #     )
-
-    #     permissions = self.session.execute(stmt).all()
-    #     try:
-    #         return [row.Permission for row in permissions]
-    #     except Exception:
-    #         self.session.rollback()
-    #         raise Exception
-    #     finally:
-    #         self.session.commit()
-
     def set_password(self, username: str, h_password: str) -> None:
         """
         Set password for specified user.
