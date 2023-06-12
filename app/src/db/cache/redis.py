@@ -1,4 +1,3 @@
-# Реализовать хранение недействительных access_token и refresh_token.
 from datetime import timedelta
 from logging import DEBUG
 from typing import Any
@@ -17,8 +16,8 @@ class RedisCache:
 
     def __init__(
         self,
-        host: str | None = redis_settings.REDIS_HOST,
-        port: int | None = redis_settings.REDIS_PORT,
+        host: str = redis_settings.redis_host,
+        port: int = redis_settings.redis_port,
     ) -> None:
         logger.debug(
             "Initialize Redis connection on host=%s, port=%s",
@@ -95,7 +94,7 @@ class RedisCache:
             keys,
         )
 
-        return self.redis.delete(*keys)
+        return await self.redis.delete(*keys)
 
     async def exists(self, *keys: list[str]) -> int:
         """Return counter of key(s) if key(s) exist(s)."""

@@ -1,20 +1,14 @@
-from sqlalchemy import create_engine, select, update, insert, delete
-from sqlalchemy.sql.expression import literal_column
-from sqlalchemy.sql import exists
-from sqlalchemy.orm import Session
 from logging import DEBUG
 from uuid import UUID
 
-from db.storage.models import (
-    BaseTable,
-    User,
-    Role,
-    UserProfile,
-    UserHistory,
-)
 from core.config import postgres_settings as pg_conf
 from core.logger import get_logger
+from db.storage.models import Role, User, UserHistory, UserProfile
 from security.hasher import Hasher
+from sqlalchemy import Row, create_engine, delete, insert, select, update
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import exists
+from sqlalchemy.sql.expression import literal_column
 
 logger = get_logger(__name__, DEBUG)
 
@@ -23,14 +17,13 @@ class PostgresStorage:
     def __init__(self) -> None:
         url = "{driver}://{user}:{password}@{host}:{port}/{database}".format(
             driver="postgresql+psycopg2",
-            user=pg_conf.POSTGRES_USER,
-            password=pg_conf.POSTGRES_PASSWORD,
-            host=pg_conf.POSTGRES_HOST,
-            port=pg_conf.POSTGRES_PORT,
-            database=pg_conf.POSTGRES_DB,
+            user=pg_conf.postgres_user,
+            password=pg_conf.postgres_password,
+            host=pg_conf.postgres_host,
+            port=pg_conf.postgres_port,
+            database=pg_conf.postgres_db,
         )
         self.engine = create_engine(url)
-        BaseTable.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
     def get_user(self, username: str) -> User:
@@ -44,8 +37,8 @@ class PostgresStorage:
             User class instance
         """
         stmt = select(User).where(
-            User.username == username,
-            User.disabled == False,
+            User.username == username,  # type: ignore
+            User.disabled == False,  # type: ignore
         )
         try:
             return self.session.execute(stmt).one()[0]
@@ -67,7 +60,7 @@ class PostgresStorage:
         """
         stmt = (
             select(Role)
-            .join(UserProfile, Role.id == UserProfile.role_id)
+            .join(UserProfile, Role.id == UserProfile.role_id)  # type: ignore
             .join(User, User.id == UserProfile.user_id)
             .where(User.username == username)
         )
@@ -80,32 +73,6 @@ class PostgresStorage:
             raise Exception
         finally:
             self.session.commit()
-
-    # def get_user_permissions(self, username: str) -> list[Permission]:
-    #     """
-    #     Get permissions for specified user.
-
-    #     Args:
-    #         username: name of specified user
-
-    #     Returns:
-    #         list of Permission's class instances
-    #     """
-    #     stmt = (
-    #         select(Permission)
-    #         .join(UserProfile, Permission.id == UserProfile.permission_id)
-    #         .join(User, UserProfile.user_id == User.id)
-    #         .where(User.username == username)
-    #     )
-
-    #     permissions = self.session.execute(stmt).all()
-    #     try:
-    #         return [row.Permission for row in permissions]
-    #     except Exception:
-    #         self.session.rollback()
-    #         raise Exception
-    #     finally:
-    #         self.session.commit()
 
     def set_password(self, username: str, h_password: str) -> None:
         """
@@ -185,9 +152,9 @@ class PostgresStorage:
             exists(1).where(User.username == username)
         )  # type: ignore
         try:
-            is_exists = self.session.execute(stmt).fetchone()[
+            is_exists = self.session.execute(stmt).fetchone()[  # type: ignore
                 0
-            ]  # type: ignore
+            ]
         except Exception:
             self.session.rollback()
             raise Exception
@@ -302,9 +269,11 @@ class PostgresStorage:
         created_role = None
         stmt = insert(Role).values(kwargs).returning(Role)
         try:
-            created_role = self.session.execute(stmt).fetchone()[
-                0
-            ]  # type: ignore
+            _created_role = self.session.execute(stmt).fetchone()
+            if not isinstance(_created_role, Row):
+                raise ValueError("Invalid role")
+
+            created_role = _created_role[0]
             self.session.commit()
             logger.debug(
                 "The role was inserted successfully: {0}".format(created_role)
@@ -372,7 +341,7 @@ class PostgresStorage:
             logger.error(e)
             raise e
 
-        return roles
+        return roles  # type: ignore
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserProfile:
         """Assign a role to an user."""
