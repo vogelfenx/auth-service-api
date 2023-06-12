@@ -24,7 +24,7 @@ class BaseTable(DeclarativeBase):
 class User(BaseTable):
     __tablename__ = "user"
 
-    username: Mapped[Optional[str]]
+    username: Mapped[str]
     email: Mapped[Optional[str]]
     full_name: Mapped[Optional[str]]
     disabled: Mapped[bool]
