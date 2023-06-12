@@ -3,6 +3,8 @@ from functools import wraps
 from api.v1.deps import CurrentUserAnnotated
 from fastapi import HTTPException, status
 
+from security.models import TokenData
+
 
 def role_required(
     roles: set[str],
@@ -17,11 +19,16 @@ def role_required(
     def decorator(func):
         @wraps(func)
         async def wrapper(
-            current_user: CurrentUserAnnotated,
             *args,
             **kwargs,
         ):
-            current_roles = current_user.roles
+            current_user = kwargs.get("current_user")
+            if not current_user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid user",
+                )
+            current_roles = TokenData.parse_obj(current_user).roles
             if len(roles.intersection(current_roles)) <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
