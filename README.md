@@ -16,12 +16,12 @@ Authentication Service repository
 ```pip install -r .\app\src\requirements.dev.txt```
 
 6. Запустить проект
-В дебаг режиме:
+В дебаг режиме (для работы сначала нужно выполнить миграции - для этого следует запустить в продакшне один раз):
 ```docker-compose -f docker-compose.debug.yml up --build```
 В продакшн режиме:
 ```docker-compose -f docker-compose.yml up --build```
 
-7. Для создания супер-пользователя с ролью `admin`, использовать следующую комманду
+7. Для создания супер-пользователя с ролью `admin`, использовать следующую комманду (выполнять нужно в контейнере).
 
    ```bash
    python manage.py createadmin
