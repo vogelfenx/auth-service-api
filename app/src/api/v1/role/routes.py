@@ -1,6 +1,7 @@
 from logging import DEBUG
 from typing import Annotated
 from uuid import UUID
+from api.v1.deps import CurrentUserAnnotated
 
 from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -13,6 +14,7 @@ logger = get_logger(__name__, DEBUG)
 
 router = APIRouter()
 
+
 @router.post(
     "/",
     status_code=status.HTTP_200_OK,
@@ -21,6 +23,7 @@ router = APIRouter()
 )
 @role_required(roles={"admin"})
 async def create_role(
+    current_user: CurrentUserAnnotated,
     role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
@@ -41,6 +44,7 @@ async def create_role(
 )
 @role_required(roles={"admin"})
 async def delete_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to delete")],
     role_service: RoleService = Depends(get_role_service),
 ) -> None:
@@ -59,6 +63,7 @@ async def delete_role(
 )
 @role_required(roles={"admin"})
 async def edit_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
     role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
@@ -79,6 +84,7 @@ async def edit_role(
 )
 @role_required(roles={"admin"})
 async def fetch_roles(
+    current_user: CurrentUserAnnotated,
     role_service: RoleService = Depends(get_role_service),
 ):
     """Get all roles."""
@@ -92,6 +98,7 @@ async def fetch_roles(
 )
 @role_required(roles={"admin"})
 async def assign_role(
+    current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Query(description="A role id.")],
     user_id: Annotated[UUID, Query(description="A user id.")],
     role_service: RoleService = Depends(get_role_service),
