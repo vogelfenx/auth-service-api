@@ -1,5 +1,4 @@
 import typer
-
 from db.storage.postgres import PostgresStorage
 from security.hasher import Hasher
 
@@ -31,7 +30,7 @@ def createadmin(username: str, password: str):
         )
     except Exception:
         print("Admin Role already exists, continue ")
-        admin_role = pg_storage.get_role_by_name(role_name='admin')
+        admin_role = pg_storage.get_role_by_name(role_name="admin")
 
     pg_storage.assign_role_to_user(
         user.id,

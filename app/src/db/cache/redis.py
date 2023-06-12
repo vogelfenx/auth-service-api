@@ -17,8 +17,8 @@ class RedisCache:
 
     def __init__(
         self,
-        host: str | None = redis_settings.REDIS_HOST,
-        port: int | None = redis_settings.REDIS_PORT,
+        host: str = redis_settings.redis_host,
+        port: int = redis_settings.redis_port,
     ) -> None:
         logger.debug(
             "Initialize Redis connection on host=%s, port=%s",

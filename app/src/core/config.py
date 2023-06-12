@@ -1,9 +1,8 @@
 import os
-
 from logging import config as logging_config
-from pydantic import BaseSettings
 
 from core.logger import LOGGING
+from pydantic import BaseSettings
 
 # Применяем настройки логирования
 logging_config.dictConfig(LOGGING)
@@ -26,37 +25,37 @@ class ApiSettings(CommonSettings):
     """Класс с настройками FastAPI."""
 
     # Название проекта. Используется в Swagger-документации
-    PROJECT_NAME: str
+    project_name: str
 
     # Шаблон для UUID
-    UUID_REGEXP = r"[\w\d]{8}-[\w\d]{4}-[\w\d]{4}-[\w\d]{4}-[\w\d]{12}"
+    uuid_regexp = r"[\w\d]{8}-[\w\d]{4}-[\w\d]{4}-[\w\d]{4}-[\w\d]{12}"
 
 
 class PostgresSettings(CommonSettings):
     """Класс с настройками Postgres."""
 
-    POSTGRES_HOST: str
-    POSTGRES_PORT: int
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    postgres_host: str
+    postgres_port: int
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
 
 
 class RedisSettings(CommonSettings):
     """Класс с настройками Redis."""
 
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_EXPIRE: int = 60 * 5  # 5 min
+    redis_host: str
+    redis_port: int
+    redis_expire: int = 60 * 5  # 5 min
 
 
 class SecuritySettings(CommonSettings):
     """Класс с настройками Redis."""
 
-    SECRET_KEY: str
-    ALGORITHM: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
-    REFRESH_TOKEN_EXPIRE_MINUTES: int
+    secret_key: str
+    algorithm: str
+    access_token_expire_minute: int
+    refresh_token_expire_minute: int
 
 
 api_settings = ApiSettings()  # type: ignore

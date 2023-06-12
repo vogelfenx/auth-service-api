@@ -1,11 +1,10 @@
 from logging import DEBUG
 from uuid import UUID
 
-from fastapi import Depends
-
 from core.logger import get_logger
-from db.storage.protocol import RoleStorage, StorageRoleModel
 from db.storage.dependency import get_storage
+from db.storage.protocol import RoleStorage, StorageRoleModel
+from fastapi import Depends
 
 from .models import CreateRole, ResponseRole, UserRole
 

@@ -12,11 +12,11 @@ if config.config_file_name is not None:
 target_metadata = None  #  type: ignore
 URL = "{driver}://{user}:{password}@{host}:{port}/{database}".format(
     driver="postgresql+psycopg2",
-    user=pg_conf.POSTGRES_USER,
-    password=pg_conf.POSTGRES_PASSWORD,
-    host=pg_conf.POSTGRES_HOST,
-    port=pg_conf.POSTGRES_PORT,
-    database=pg_conf.POSTGRES_DB,
+    user=pg_conf.postgres_user,
+    password=pg_conf.postgres_password,
+    host=pg_conf.postgres_host,
+    port=pg_conf.postgres_port,
+    database=pg_conf.postgres_db,
 )
 
 

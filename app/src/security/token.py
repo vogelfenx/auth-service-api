@@ -8,7 +8,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 
-# from fastapi.security import OAuth2PasswordBearer
 from .bearers import OAuth2PasswordCookiesBearer
 from .models import TokenData
 
@@ -38,8 +37,8 @@ def create_token(
 
     encoded_jwt = jwt.encode(
         claims=to_encode,
-        key=security_settings.SECRET_KEY,
-        algorithm=security_settings.ALGORITHM,
+        key=security_settings.secret_key,
+        algorithm=security_settings.algorithm,
     )
     return encoded_jwt
 
@@ -50,8 +49,8 @@ def decode_token(token: str):
 
     payload = jwt.decode(
         token=token,
-        key=security_settings.SECRET_KEY,
-        algorithms=[security_settings.ALGORITHM],
+        key=security_settings.secret_key,
+        algorithms=[security_settings.algorithm],
     )
 
     exp = payload.get("exp")

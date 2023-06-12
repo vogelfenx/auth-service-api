@@ -9,7 +9,7 @@ from db.storage import dependency as storage_db
 from db.cache import dependency as cache_dependency
 
 app = FastAPI(
-    title=api_settings.PROJECT_NAME,
+    title=api_settings.project_name,
     docs_url="/api/openapi",
     openapi_url="/api/openapi.json",
     default_response_class=ORJSONResponse,
