@@ -1,13 +1,11 @@
 from datetime import timedelta
 from typing import Annotated
-from fastapi.security.utils import get_authorization_scheme_param
+
 from api.v1.deps import CurrentUserAnnotated
-
-
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
-from db.storage.protocol import RoleStorage, UserStorage
+from db.storage.protocol import UserStorage
 from fastapi import (
     APIRouter,
     Depends,
@@ -18,15 +16,13 @@ from fastapi import (
     status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
-from security.models import TokenData
-from security.token import (
-    create_token,
-    decode_token,
-)
+from fastapi.security.utils import get_authorization_scheme_param
 from security.hasher import Hasher
+from security.models import TokenData
+from security.token import create_token, decode_token
 
+from .models import ResponseUser, UserAnnotated
 from .service import invalidate_token, is_token_invalidated
-from .models import ResponseUser, User, UserAnnotated, Password
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -91,12 +87,12 @@ async def login_for_access_token(
         )
 
     _roles = user_storage.get_user_roles(user.username)
-    roles = [role.role for role in _roles if not role.disabled]
+    roles = [role.role for role in _roles if not role.disabled]  # type: ignore
     access_token_expires = timedelta(
-        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.access_token_expire_minutes,
     )
     refresh_token_expires = timedelta(
-        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(
@@ -166,7 +162,10 @@ async def logout(
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
 
-    storage.log_user_event(username=current_user.username, event_desc="Logout")
+    storage.log_user_event(
+        username=current_user.username,
+        event_desc="Logout",
+    )
 
     return status.HTTP_200_OK
 
@@ -236,10 +235,10 @@ async def change_password(
     )
 
     access_token_expires = timedelta(
-        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.access_token_expire_minutes,
     )
     refresh_token_expires = timedelta(
-        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(
@@ -304,7 +303,7 @@ async def edit_common_user_info(
 )
 async def get_user_history(
     current_user: CurrentUserAnnotated,
-    limit: Annotated[int | None, Query(description="User history limit")],
+    limit: Annotated[int, Query(description="User history limit")],
     storage: UserStorage = Depends(get_storage),
 ):
     """
@@ -345,7 +344,7 @@ async def refresh(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not found refresh_token. Access Denied.",
         )
-    schema, param = get_authorization_scheme_param(old_refresh_token)
+    _, param = get_authorization_scheme_param(old_refresh_token)
 
     if not param:
         raise HTTPException(
@@ -368,11 +367,11 @@ async def refresh(
     roles = [role.role for role in _roles if not role.disabled]
 
     access_token_expires = timedelta(
-        minutes=security_settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.access_token_expire_minutes,
     )
 
     refresh_token_expires = timedelta(
-        minutes=security_settings.REFRESH_TOKEN_EXPIRE_MINUTES,
+        minutes=security_settings.refresh_token_expire_minutes,
     )
 
     access_token = create_token(

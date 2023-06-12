@@ -1,9 +1,7 @@
-from fastapi import Depends, HTTPException, status
-from api.v1.deps import CurrentUserAnnotated
-
-from security.token import get_current_username_from_token
 from functools import wraps
-from fastapi import status, HTTPException
+
+from api.v1.deps import CurrentUserAnnotated
+from fastapi import HTTPException, status
 
 
 def role_required(

@@ -1,12 +1,9 @@
 from email.policy import default
 from typing import Annotated
 from uuid import UUID
-from fastapi import (
-    Depends,
-    Path,
-    Query,
-)
-from pydantic import BaseModel, Field, EmailStr, SecretStr
+
+from fastapi import Depends
+from pydantic import BaseModel, EmailStr, SecretStr
 
 
 class Password(BaseModel):

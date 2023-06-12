@@ -1,7 +1,6 @@
+from core.logger import get_logger
 from db.cache.dependency import get_cache
 from security.token import decode_token
-from db.cache.protocol import Cache
-from core.logger import get_logger
 
 logger = get_logger(__name__, logging_level="DEBUG")
 
@@ -24,6 +23,9 @@ async def invalidate_token(
 
     username = decoded_token.get("username")
     token_ttl = decoded_token.get("exp")
+
+    if not username:
+        raise ValueError("Invalid username")
 
     token_key = _fromat_token_key_for_cache(
         username=username,
@@ -50,6 +52,9 @@ async def is_token_invalidated(
 
     decoded_token = decode_token(token)
     username = decoded_token.get("username")
+
+    if not username:
+        raise ValueError("Invalid username")
 
     token_key = _fromat_token_key_for_cache(
         username=username,

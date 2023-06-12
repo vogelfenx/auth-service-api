@@ -1,4 +1,3 @@
-from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -9,5 +8,5 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    username: str
     roles: list[str] = Field(default_factory=list)

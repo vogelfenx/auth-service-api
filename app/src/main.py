@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
         await cache_dependency.cache.close()
 
 app = FastAPI(
-    title=api_settings.PROJECT_NAME,
+    title=api_settings.project_name,
     docs_url="/api/openapi",
     openapi_url="/api/openapi.json",
     default_response_class=ORJSONResponse,

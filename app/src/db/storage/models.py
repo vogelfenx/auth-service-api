@@ -1,10 +1,9 @@
-from uuid import uuid4, UUID
-from typing import Optional, List
-
-from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
-from sqlalchemy import ForeignKey, UniqueConstraint, Index
-
 from datetime import datetime
+from typing import List, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import ForeignKey, Index, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class BaseTable(DeclarativeBase):
