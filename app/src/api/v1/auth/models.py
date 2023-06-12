@@ -1,3 +1,4 @@
+from email.policy import default
 from typing import Annotated
 from uuid import UUID
 from fastapi import (
@@ -13,18 +14,36 @@ class Password(BaseModel):
 
 
 class User(Password, BaseModel):
-    username: str
-    email: EmailStr | None
-    full_name: str | None
-    disabled: bool = False
+    username: Annotated[
+        str,
+        Query(description="Uniq username"),
+    ]
+    email: EmailStr | None = None
+    full_name: Annotated[
+        str | None,
+        Query(description="User's full name"),
+    ] = None
+    disabled: Annotated[
+        bool,
+        Query(description="Is the user activated flag"),
+    ] = False
 
 
 class ResponseUser(BaseModel):
     id: UUID
-    username: str
+    username: Annotated[
+        str,
+        Query(description="Uniq username"),
+    ]
     email: EmailStr | None = None
-    full_name: str | None = None
-    disabled: bool = False
+    full_name: Annotated[
+        str | None,
+        Query(description="User's full name"),
+    ] = None
+    disabled: Annotated[
+        bool,
+        Query(description="Is the user activated flag"),
+    ] = False
 
 
 PasswordAnnotated = Annotated[Password, Depends()]
