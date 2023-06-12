@@ -34,16 +34,15 @@ async def shutdown():
         await cache_dependency.cache.close()
 
 
-# Теги указываем для удобства навигации по документации
-app.include_router(
-    role_v1,
-    prefix="/api/v1/role",
-    tags=["role"],
-    responses={404: {"description": "Not found"}},
-)
 app.include_router(
     auth_v1,
     prefix="/api/v1/auth",
     tags=["auth"],
+    responses={404: {"description": "Not found"}},
+)
+app.include_router(
+    role_v1,
+    prefix="/api/v1/role",
+    tags=["role"],
     responses={404: {"description": "Not found"}},
 )
