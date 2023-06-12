@@ -1,8 +1,6 @@
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
-from fastapi import status
-from .models import Token
 
 
 class OAuth2PasswordCookiesBearer(OAuth2PasswordBearer):

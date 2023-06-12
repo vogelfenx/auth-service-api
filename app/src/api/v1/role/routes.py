@@ -1,4 +1,4 @@
-from logging import DEBUG, INFO
+from logging import DEBUG
 from typing import Annotated
 from uuid import UUID
 
@@ -6,8 +6,8 @@ from core.logger import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from .models import CreateRole, ResponseRole
-from .utils import role_required
 from .service import RoleService, get_role_service
+from .utils import role_required
 
 logger = get_logger(__name__, DEBUG)
 
