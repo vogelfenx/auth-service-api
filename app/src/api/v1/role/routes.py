@@ -26,7 +26,7 @@ async def create_role(
     current_user: CurrentUserAnnotated,
     role: CreateRole = Depends(CreateRole),
     role_service: RoleService = Depends(get_role_service),
-) -> dict[str, UUID]:
+) -> dict[str, str]:
     """Create a new role."""
     try:
         created_role = role_service.create_role(role=role)
@@ -35,7 +35,7 @@ async def create_role(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    return {"uuid": UUID(created_role.id)}
+    return {"uuid": str(created_role.id)}
 
 
 @router.delete(
