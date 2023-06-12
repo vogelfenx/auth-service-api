@@ -1,4 +1,3 @@
-# Реализовать хранение недействительных access_token и refresh_token.
 from datetime import timedelta
 from logging import DEBUG
 from typing import Any

@@ -29,12 +29,15 @@ logger.setLevel(level="DEBUG")
 router = APIRouter()
 
 
-@router.post("/signup")
+@router.post(
+    "/signup",
+    summary="Sign up an user.",
+)
 async def signup(
     user: UserAnnotated,
     storage: UserStorage = Depends(get_storage),
 ):
-    """Registration a user."""
+    """Sign up a new user."""
     if storage.user_exists(user.username):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -54,12 +57,16 @@ async def signup(
     return {"message": "The user has been created!"}
 
 
-@router.post("/token")
+@router.post(
+    "/token",
+    summary="Release access and refresh tokens.",
+)
 async def login_for_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     user_storage: UserStorage = Depends(get_storage),
 ):
+    """Release access and refresh tokens to authorized user."""
     try:
         user = user_storage.authenticate_user(
             username=form_data.username,
@@ -124,7 +131,10 @@ async def login_for_access_token(
     }
 
 
-@router.get("/logout")
+@router.get(
+    "/logout",
+    summary="Logout the current user.",
+)
 async def logout(
     response: Response,
     request: Request,
@@ -134,7 +144,8 @@ async def logout(
     """Logout the current user.
 
     Add token to blacklist with expiration date of refresh_token.
-    Delete tokens in cookies.
+
+    Delete old access and refresh tokens from user's cookies.
     """
     access_token = request.cookies["access_token"]
     refresh_token = request.cookies["refresh_token"]
@@ -159,12 +170,16 @@ async def logout(
     return status.HTTP_200_OK
 
 
-@router.get("/user/me")
+@router.get(
+    "/user/me",
+    summary="Return current user information.",
+    response_model=ResponseUser,
+)
 async def user_me(
     current_user: CurrentUserAnnotated,
     storage: UserStorage = Depends(get_storage),
 ) -> ResponseUser:
-    """Return current user."""
+    """Return current logged user personal information."""
     try:
         user = storage.get_user(username=current_user.username)
     except Exception:
@@ -182,7 +197,10 @@ async def user_me(
     )
 
 
-@router.put("/user/password")
+@router.put(
+    "/user/password",
+    summary="Change current user's password.",
+)
 async def change_password(
     response: Response,
     request: Request,
@@ -191,7 +209,7 @@ async def change_password(
     current_user: CurrentUserAnnotated,
     storage: UserStorage = Depends(get_storage),
 ):
-    """Change password for user by id."""
+    """Change password for current user."""
 
     if not storage.authenticate_user(
         username=current_user.username,
@@ -250,7 +268,10 @@ async def change_password(
     return {"message": "User password has been updated!"}
 
 
-@router.put("/user/edit")
+@router.put(
+    "/user/edit",
+    summary="Edit current user's personal information.",
+)
 async def edit_common_user_info(
     current_user: CurrentUserAnnotated,
     psw: Annotated[str, Query(description="User password.")],
@@ -276,7 +297,10 @@ async def edit_common_user_info(
     return {"message": "User has been changed!"}
 
 
-@router.get("/user/history")
+@router.get(
+    "/user/history",
+    summary="Get current user's login history.",
+)
 async def get_user_history(
     current_user: CurrentUserAnnotated,
     limit: Annotated[int, Query(description="User history limit")],
@@ -300,12 +324,20 @@ async def get_user_history(
     )
 
 
-@router.post("/refresh")
+@router.post(
+    "/refresh",
+    summary="Reissue new access & refresh tokens.",
+)
 async def refresh(
     request: Request,
     response: Response,
     storage: UserStorage = Depends(get_storage),
 ):
+    """Refresh access & refresh tokens using current refresh token.
+
+    1. Revoke current tokens
+    2. Issue new access & refresh tokens.
+    """
     old_refresh_token = request.cookies.get("refresh_token")
     if not old_refresh_token:
         raise HTTPException(
