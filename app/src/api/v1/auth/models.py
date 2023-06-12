@@ -2,7 +2,7 @@ from email.policy import default
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from pydantic import BaseModel, EmailStr, SecretStr
 
 
