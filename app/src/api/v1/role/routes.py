@@ -18,6 +18,8 @@ router = APIRouter()
 @router.post(
     "/",
     status_code=status.HTTP_200_OK,
+    summary="Create a new role",
+    response_description="Created role's ID.",
 )
 async def create_role(
     current_user: CurrentUserAnnotated,
@@ -25,7 +27,6 @@ async def create_role(
     role_service: RoleService = Depends(get_role_service),
 ) -> dict[str, UUID]:
     """Create a new role."""
-
     valudate_admin_role(current_user.roles)
     try:
         created_role = role_service.create_role(role=role)
@@ -37,7 +38,10 @@ async def create_role(
     return {"uuid": created_role.id}
 
 
-@router.delete("/{role_id}")
+@router.delete(
+    "/{role_id}",
+    summary="Delete a role",
+)
 async def delete_role(
     current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to delete")],
@@ -54,7 +58,10 @@ async def delete_role(
         )
 
 
-@router.put("/{role_id}")
+@router.put(
+    "/{role_id}",
+    summary="Edit a role",
+)
 async def edit_role(
     current_user: CurrentUserAnnotated,
     role_id: Annotated[UUID, Path(description="ID of the role to edit")],
@@ -72,18 +79,22 @@ async def edit_role(
         )
 
 
-@router.get("/all", response_model=list[ResponseRole])
+@router.get(
+    "/all",
+    summary="Get all roles",
+    response_model=list[ResponseRole],
+)
 async def fetch_roles(
     current_user: CurrentUserAnnotated,
     role_service: RoleService = Depends(get_role_service),
 ):
-    """Fetch all roles."""
-
+    """Get all roles."""
     return role_service.fetch_roles()
 
 
 @router.post(
     "/assign",
+    summary="Assign a role to a user.",
     status_code=status.HTTP_201_CREATED,
 )
 async def assign_role(
@@ -92,7 +103,7 @@ async def assign_role(
     user_id: Annotated[UUID, Query(description="A user id.")],
     role_service: RoleService = Depends(get_role_service),
 ):
-    """Assign a role to a user."""
+    """Assign the given role to the given user."""
     valudate_admin_role(current_user.roles)
 
     _ = role_service.assign_role_to_user(
