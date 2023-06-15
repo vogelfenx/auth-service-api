@@ -1,5 +1,6 @@
 from logging import DEBUG
 from uuid import UUID
+from random import choice
 
 from core.config import postgres_settings as pg_conf
 from core.logger import get_logger
@@ -38,6 +39,7 @@ class PostgresStorage:
         """
         stmt = select(User).where(
             User.username == username,  # type: ignore
+            User.partition_char_num == ord(username[0]),  # type: ignore
             User.disabled == False,  # type: ignore
         )
         try:
@@ -62,7 +64,10 @@ class PostgresStorage:
             select(Role)
             .join(UserProfile, Role.id == UserProfile.role_id)  # type: ignore
             .join(User, User.id == UserProfile.user_id)
-            .where(User.username == username)
+            .where(
+                    User.username == username,
+                    User.partition_char_num == ord(username[0]),
+                )
         )
         try:
             roles = self.session.execute(stmt).all()
@@ -87,7 +92,10 @@ class PostgresStorage:
         """
         stmt = (
             update(User)
-            .where(User.username == username)
+            .where(
+                    User.username == username,
+                    User.partition_char_num == ord(username[0]),
+                )
             .values(hashed_password=h_password)
         )
         try:
@@ -108,6 +116,7 @@ class PostgresStorage:
         Returns:
             None
         """
+        kwargs["partition_char_num"] = ord(kwargs["username"][0])
         stmt = insert(User).values(kwargs)
         try:
             self.session.execute(stmt)
@@ -129,7 +138,12 @@ class PostgresStorage:
         Returns:
             None
         """
-        stmt = update(User).where(User.username == username).values(kwargs)
+        kwargs["partition_char_num"] = ord(username[0])
+        stmt = (
+                update(User)
+                .where(User.username == username, User.partition_char_num == ord(username[0]))
+                .values(kwargs)
+            )
         try:
             self.session.execute(stmt)
         except Exception:
@@ -149,7 +163,10 @@ class PostgresStorage:
             bool user existence flag
         """
         stmt = select(
-            exists(1).where(User.username == username)
+            exists(1).where(
+                        User.username == username,
+                        User.partition_char_num == ord(username[0])
+                    )
         )  # type: ignore
         try:
             is_exists = self.session.execute(stmt).fetchone()[  # type: ignore
@@ -202,7 +219,10 @@ class PostgresStorage:
         stmt = (
             select(UserHistory)
             .join(User, UserHistory.user_id == User.id)
-            .where(User.username == username)
+            .where(
+                    User.username == username,
+                    User.partition_char_num == ord(username[0])
+                )
             .limit(history_limit)
         )
 
@@ -212,7 +232,10 @@ class PostgresStorage:
         hashed_password = Hasher.get_password_hash(password=password)
         stmt = (
             update(User)
-            .where(User.username == username)
+            .where(
+                    User.username == username,
+                    User.partition_char_num == ord(username[0])
+                )
             .values(hashed_password=hashed_password)
         )
         """
@@ -247,11 +270,20 @@ class PostgresStorage:
         event_desc_col = literal_column("'{0}'".format(event_desc)).label(
             "user_event"
         )  # type: ignore
-        select_stmt = select(User.id.label("user_id"), event_desc_col).where(
-            User.username == username
-        )
+        device_type = choice(['smart', 'mobile', 'web'])
+        event_device_col = literal_column("'{0}'".format(device_type)).label(
+            "device_type"
+        )  # type: ignore
+        select_stmt = select(
+                                User.id.label("user_id"),
+                                event_desc_col,
+                                event_device_col
+                        ).where(
+                            User.username == username,
+                            User.partition_char_num == ord(username[0])
+                            )
         insert_stmt = insert(UserHistory).from_select(
-            ["user_id", "user_event"], select_stmt
+            ["user_id", "user_event", "device_type"], select_stmt
         )
         try:
             self.session.execute(insert_stmt)
