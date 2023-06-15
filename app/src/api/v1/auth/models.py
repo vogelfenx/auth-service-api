@@ -6,6 +6,10 @@ from fastapi import Depends, Query
 from pydantic import BaseModel, EmailStr, SecretStr
 
 
+class Url(BaseModel):
+    url: str
+
+
 class Password(BaseModel):
     password: SecretStr
 
@@ -41,6 +45,23 @@ class ResponseUser(BaseModel):
         bool,
         Query(description="Is the user activated flag"),
     ] = False
+
+
+class Tokens(BaseModel):
+    """Store access & refresh tokens."""
+
+    access_token: Annotated[
+        str,
+        Query(description="Token for an accessing."),
+    ]
+    refresh_token: Annotated[
+        str,
+        Query(description="Token for a refreshing."),
+    ]
+    token_type: Annotated[
+        str,
+        Query(description="Token's type. Bearer by default."),
+    ] = "bearer"
 
 
 PasswordAnnotated = Annotated[Password, Depends()]

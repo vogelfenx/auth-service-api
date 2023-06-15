@@ -58,7 +58,20 @@ class SecuritySettings(CommonSettings):
     refresh_token_expire_minutes: int
 
 
+class YandexAuthSettings(CommonSettings):
+    """Класс с настройками Yandex."""
+
+    client_id: str
+    client_secret: str
+    auth_url: str
+    token_url: str
+    revoke_token_url: str
+    user_url: str
+    callback_url: str
+
+
 api_settings = ApiSettings()  # type: ignore
 postgres_settings = PostgresSettings()  # type: ignore
 redis_settings = RedisSettings()  # type: ignore
 security_settings = SecuritySettings()  # type: ignore
+yandex_auth_settings = YandexAuthSettings()  # type: ignore

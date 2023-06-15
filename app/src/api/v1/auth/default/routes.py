@@ -1,7 +1,6 @@
 from datetime import timedelta
 from typing import Annotated
 
-from api.v1.deps import CurrentUserAnnotated
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
@@ -21,8 +20,9 @@ from security.hasher import Hasher
 from security.models import TokenData
 from security.token import create_token, decode_token
 
-from .models import ResponseUser, UserAnnotated
-from .service import invalidate_token, is_token_invalidated
+from ..models import ResponseUser, Tokens, UserAnnotated
+from ..service import invalidate_token, is_token_invalidated
+from ..deps import CurrentUserAnnotated
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -124,11 +124,10 @@ async def login_for_access_token(
         username=user.username, event_desc="Token issuance"
     )
 
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+    return Tokens(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 
 @router.get(
