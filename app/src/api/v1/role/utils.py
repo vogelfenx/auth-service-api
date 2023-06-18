@@ -1,5 +1,6 @@
 from functools import wraps
 
+from api.v1.deps import CurrentUserAnnotated
 from fastapi import HTTPException, status
 
 from security.models import TokenData
