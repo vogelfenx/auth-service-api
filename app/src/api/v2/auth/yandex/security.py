@@ -9,8 +9,9 @@ from authlib.integrations.starlette_client import (
 
 from starlette.requests import Request
 
-TOKEN_URL = "v1/auth/yandex/token"
-REFRESH_URL = "v1/auth/yandex/refresh"
+TOKEN_URL = "v2/auth/yandex/token"
+# TOKEN_URL = "v2/auth/yandex/example_token"
+REFRESH_URL = "v2/auth/yandex/refresh"
 
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
