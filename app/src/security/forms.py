@@ -21,3 +21,20 @@ class OAuth2PasswordAndRefreshRequestForm:
         self.scopes = scope.split()
         self.client_id = client_id
         self.client_secret = client_secret
+
+
+# TODO актуализировать для Яндекса
+class OAuth2YandexForm:
+    """Modified from fastapi.security.OAuth2PasswordRequestForm"""
+
+    def __init__(
+        self,
+        client_id: str = Form(description="Client id must be defined."),
+        client_secret: str = Form(
+            description="Client secret must be defined."
+        ),
+        scope: str = Form(default="", description="Accuired permissions."),
+    ):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.scopes = scope.split()

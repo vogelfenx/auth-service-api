@@ -8,10 +8,14 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 
-from .bearers import OAuth2PasswordCookiesBearer
+from security.bearers import OAuth2PasswordCookiesBearer
+
 from .models import TokenData
 
 logger = get_logger(__name__)
+
+oauth2_scheme = OAuth2PasswordCookiesBearer(tokenUrl="v1/auth/token")
+
 
 # Error
 CREDENTIALS_EXCEPTION = HTTPException(
@@ -19,9 +23,6 @@ CREDENTIALS_EXCEPTION = HTTPException(
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
-
-
-oauth2_scheme = OAuth2PasswordCookiesBearer(tokenUrl="v1/auth/token")
 
 
 def create_token(
@@ -43,14 +44,19 @@ def create_token(
     return encoded_jwt
 
 
-def decode_token(token: str):
+# TODO убрать default values
+def decode_token(
+    token: str,
+    key: str = security_settings.secret_key,
+    algorithms: list[str] = [security_settings.algorithm],
+):
     if re.search(string=token.lower(), pattern="^bearer "):
         _, token = get_authorization_scheme_param(token)
 
     payload = jwt.decode(
         token=token,
-        key=security_settings.secret_key,
-        algorithms=[security_settings.algorithm],
+        key=key,
+        algorithms=algorithms,
     )
 
     exp = payload.get("exp")

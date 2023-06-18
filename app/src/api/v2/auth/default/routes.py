@@ -1,14 +1,12 @@
 from datetime import timedelta
 from typing import Annotated
 
-from api.v1.deps import CurrentUserAnnotated
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
 from db.storage.protocol import UserStorage
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
     HTTPException,
     Query,
@@ -22,8 +20,9 @@ from security.hasher import Hasher
 from security.models import TokenData
 from security.token import create_token, decode_token
 
-from .models import ResponseUser, UserAnnotated
-from .service import invalidate_token, is_token_invalidated
+from ..models import ResponseUser, Tokens, UserAnnotated
+from ..service import invalidate_token, is_token_invalidated
+from ..deps import CurrentUserAnnotated
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
@@ -125,11 +124,10 @@ async def login_for_access_token(
         username=user.username, event_desc="Token issuance"
     )
 
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-    }
+    return Tokens(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 
 @router.get(
@@ -332,9 +330,6 @@ async def get_user_history(
 async def refresh(
     request: Request,
     response: Response,
-    current_refresh_token: Annotated[
-        str | None,
-        Body(description="refresh_token")] = None,
     storage: UserStorage = Depends(get_storage),
 ):
     """Refresh access & refresh tokens using current refresh token.
@@ -342,32 +337,29 @@ async def refresh(
     1. Revoke current tokens
     2. Issue new access & refresh tokens.
     """
-    if not current_refresh_token:
-        current_refresh_token = request.cookies.get("refresh_token")
-        _, current_refresh_token = get_authorization_scheme_param(
-            current_refresh_token)
-
-    if not current_refresh_token:
+    old_refresh_token = request.cookies.get("refresh_token")
+    if not old_refresh_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not found refresh_token. Access Denied.",
         )
+    _, param = get_authorization_scheme_param(old_refresh_token)
 
-    if not current_refresh_token:
+    if not param:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if await is_token_invalidated(current_refresh_token, token_name="refresh_token"):
+    if await is_token_invalidated(param, token_name="refresh_token"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalidated",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = decode_token(current_refresh_token)
+    payload = decode_token(old_refresh_token)
     token_data = TokenData.parse_obj(payload)
     current_user = storage.get_user(username=token_data.username)
     _roles = storage.get_user_roles(username=token_data.username)
@@ -387,7 +379,7 @@ async def refresh(
     )
 
     await invalidate_token(
-        token=current_refresh_token,
+        token=old_refresh_token,
         token_name="refresh_token",
     )
 
@@ -410,8 +402,3 @@ async def refresh(
         value="Bearer {0}".format(refresh_token),
         secure=True,
     )
-
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-    }

@@ -22,21 +22,21 @@ class BaseTable(DeclarativeBase):
 
 class User(BaseTable):
     __tablename__ = "user"
+    __table_args__ = (
+        UniqueConstraint("username", name="uniq_username"),
+        Index("idx_username", "username"),
+    )
 
     username: Mapped[str]
     email: Mapped[Optional[str]]
     full_name: Mapped[Optional[str]]
     disabled: Mapped[bool]
     hashed_password: Mapped[str]
+    partition_char_num: Mapped[int]
 
     logins: Mapped[List["UserHistory"]] = relationship(cascade="all, delete")
     user_profile: Mapped[List["UserProfile"]] = relationship(
         cascade="all, delete"
-    )
-
-    __table_args__ = (
-        UniqueConstraint("username", name="uniq_username"),
-        Index("idx_username", "username"),
     )
 
     def __repr__(self) -> str:
@@ -70,6 +70,7 @@ class UserHistory(BaseTable):
 
     user_id: Mapped[UUID] = mapped_column(ForeignKey("user.id"))
     user_event: Mapped[Optional[str]]
+    device_type: Mapped[str]
 
     def __repr__(self) -> str:
         return f"User event: {self.user_event}, timestamp: {self.created}"
