@@ -1,49 +1,30 @@
+import base64
+import ssl
 from typing import Annotated
+from urllib.parse import urlencode
 from uuid import uuid4
 
-from pydantic import BaseModel
-from api.v1.auth.models import Tokens, Url
-from api.v1.auth.yandex.models import UserInfo
-from core.config import yandex_auth_settings, security_settings
+import aiohttp
+import certifi
+from core.config import yandex_auth_settings
 from core.logger import get_logger
-from db.storage.dependency import get_storage
-from db.storage.protocol import UserStorage
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
-    Form,
     HTTPException,
     Query,
-    Request,
     Response,
-    Security,
     status,
 )
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.security.utils import get_authorization_scheme_param
-from security.forms import OAuth2YandexForm
-from security.models import TokenData
-from security.token import decode_token
-from typing import Annotated
-from ..service import invalidate_token, is_token_invalidated
-from .security import (
-    get_tokens,
-    oauth2_scheme,
-)
-import aiohttp
-import ssl
-import certifi
-from urllib.parse import urlencode
-import base64
+from pydantic import BaseModel
+
+from ..models import Tokens, Url
+from .models import UserInfo
+from .security import get_tokens
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
 router = APIRouter()
-
-
-class CodeResponse(BaseModel):
-    code: str
 
 
 @router.get(

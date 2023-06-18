@@ -1,17 +1,12 @@
 """Authentication scheme."""
-from typing import Annotated, Any
-from fastapi import Depends, HTTPException, Request, status
-from fastapi.security.oauth2 import OAuth2AuthorizationCodeBearer, OAuth2
-from api.v1.auth.models import Tokens
+from fastapi import Request
+from fastapi.security.oauth2 import OAuth2AuthorizationCodeBearer
+from ..models import Tokens
 from core.config import yandex_auth_settings
-from security.models import TokenData
 from authlib.integrations.starlette_client import (
-    OAuth,
     OAuthError as OAuthError,
 )
-from starlette.config import Config
 
-# from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
 
 TOKEN_URL = "v1/auth/yandex/token"

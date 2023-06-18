@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
-from api.v1.auth.default.routes import router as default_auth_v1
-from api.v1.auth.yandex.routes import router as yandex_auth_v1
+from api.v2.auth.default.routes import router as default_auth_v2
+from api.v2.auth.yandex.routes import router as yandex_auth_v2
+from api.v1.auth.routes import router as auth_v1
 from api.v1.role.routes import router as role_v1
 from core.config import api_settings, security_settings
 from db.cache import dependency as cache_dependency
@@ -78,18 +79,24 @@ app = FastAPI(
 app.include_router(
     role_v1,
     prefix="/api/v1/role",
-    tags=["role"],
+    tags=["role-v1"],
     responses={404: {"description": "Not found"}},
 )
 app.include_router(
-    default_auth_v1,
-    prefix="/api/v1/auth/default",
-    tags=["auth-default"],
+    auth_v1,
+    prefix="/api/v1/auth",
+    tags=["auth-v1"],
     responses={404: {"description": "Not found"}},
 )
 app.include_router(
-    yandex_auth_v1,
-    prefix="/api/v1/auth/yandex",
-    tags=["auth-yandex"],
+    default_auth_v2,
+    prefix="/api/v2/auth/default",
+    tags=["auth-default-v2"],
+    responses={404: {"description": "Not found"}},
+)
+app.include_router(
+    yandex_auth_v2,
+    prefix="/api/v2/auth/yandex",
+    tags=["auth-yandex-v2"],
     responses={404: {"description": "Not found"}},
 )
