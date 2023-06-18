@@ -12,8 +12,8 @@ services:
       context: app
       dockerfile: settings/docker/fastapi/dockerfile
     ports:
-      - "8000:8000"
-      - "5678:5678"
+      - "8001:8001"
+      - "5679:5679"
     env_file:
       app/.env
     deploy:
@@ -31,7 +31,7 @@ services:
       [
         "sh",
         "-c",
-        "pip install debugpy && python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+        "pip install debugpy && python -m debugpy --listen 0.0.0.0:5679 -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8001",
       ]
 
   redis:
@@ -41,8 +41,8 @@ services:
       dockerfile: settings/docker/redis/dockerfile
     env_file:
       app/.env
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
 
   postgres:
     container_name: auth_postgres
@@ -53,8 +53,8 @@ services:
       - pg_auth_data:/var/lib/postgresql/data/
     env_file:
       app/.env
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
 
 networks:
   default:
