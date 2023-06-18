@@ -40,8 +40,8 @@ services:
       - pg_auth_data:/var/lib/postgresql/data/
     env_file:
       app/.env
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"    
   
   nginx:
     container_name: nginx_auth_api
@@ -51,7 +51,8 @@ services:
       - ./app/settings/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./app/settings/docker/nginx/site.conf:/etc/nginx/conf.d/site.conf:ro
     ports:
-      - "80:80"
+      - "81:81"
+
 
 
 networks:
