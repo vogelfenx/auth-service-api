@@ -10,6 +10,7 @@ from core.config import yandex_auth_settings
 from core.logger import get_logger
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     HTTPException,
     Query,
@@ -20,11 +21,29 @@ from pydantic import BaseModel
 
 from ..models import Tokens, Url
 from .models import UserInfo
-from .security import get_tokens
+from .security import get_tokens, oauth2_scheme
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
 router = APIRouter()
+
+
+@router.get(
+    "/example", summary="Step 1: Client recieves a login url and redirects."
+)
+async def example(example=Depends(oauth2_scheme)):
+    pass
+
+
+@router.post(
+    "/example_token",
+    summary="Step 2: Exchange a code to tokens.",
+)
+async def example_token(
+    response: Response,
+    body=Body(),
+):
+    pass
 
 
 @router.get(

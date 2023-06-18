@@ -8,9 +8,14 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 
+from security.bearers import OAuth2PasswordCookiesBearer
+
 from .models import TokenData
 
 logger = get_logger(__name__)
+
+oauth2_scheme = OAuth2PasswordCookiesBearer(tokenUrl="v1/auth/token")
+
 
 # Error
 CREDENTIALS_EXCEPTION = HTTPException(
@@ -63,3 +68,29 @@ def decode_token(
         raise ValueError("Refresh token expired")
 
     return payload
+
+
+async def get_current_username_from_token(
+    token: Annotated[str, Depends(oauth2_scheme)]
+) -> TokenData:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_token(token)
+        username: str | None = payload.get("username")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData.parse_obj(payload)
+    except JWTError:
+        raise credentials_exception
+
+    return token_data
+
+
+async def get_current_user_token(
+    token: Annotated[str, Depends(oauth2_scheme)]
+):
+    return token
