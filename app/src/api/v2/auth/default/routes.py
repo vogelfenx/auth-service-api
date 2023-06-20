@@ -23,7 +23,7 @@ from ..deps import CurrentUserAnnotated
 from ..models import ResponseUser, Tokens, UserAnnotated
 from ..service import invalidate_token, is_token_invalidated
 
-logger = get_logger(__name__, level="DEBUG")
+logger = get_logger(__name__)
 router = APIRouter()
 
 PaginationParameters = Annotated[dict, Depends(pagination_parameters)]
