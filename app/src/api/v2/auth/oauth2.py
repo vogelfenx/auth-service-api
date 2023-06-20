@@ -11,6 +11,8 @@ from enum import Enum
 
 
 class Provider(str, Enum):
+    """Only this providers will use as schemes in service."""
+
     google = "google"
     vk = "vk"
 
@@ -36,7 +38,7 @@ oauth.register(
 )
 
 oauth.register(
-    name=Yandex.NAME,
+    name="yandex",
     client_id=yandex_auth_settings.yandex_id,
     client_secret=yandex_auth_settings.yandex_secret,
     authorize_params={
