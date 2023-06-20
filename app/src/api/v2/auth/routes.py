@@ -36,7 +36,7 @@ async def login_via_google(
     """
     This endoint works as redirector from client site to authorization page.
 
-    NOTE: Yandex and Vk providers are instable. Use google.
+    NOTE: Use google. Yandex and Vk providers are instable (we keep it here for feature dev).
     """
     redirect_uri = str(
         request.url_for(
