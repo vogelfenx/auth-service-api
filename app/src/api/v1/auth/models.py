@@ -1,4 +1,4 @@
-from email.policy import default
+from email.policy import default as default
 from typing import Annotated
 from uuid import UUID
 

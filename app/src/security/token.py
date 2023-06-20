@@ -7,7 +7,6 @@ from core.logger import get_logger
 from fastapi import Depends, HTTPException, status
 from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
-
 from security.bearers import OAuth2PasswordCookiesBearer
 
 from .models import TokenData
@@ -44,7 +43,6 @@ def create_token(
     return encoded_jwt
 
 
-# TODO убрать default values
 def decode_token(
     token: str,
     key: str = security_settings.secret_key,

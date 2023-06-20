@@ -2,7 +2,7 @@ import os
 from logging import config as logging_config
 
 from core.logger import LOGGING
-from pydantic import BaseSettings
+from pydantic import BaseSettings, Field
 
 # Применяем настройки логирования
 logging_config.dictConfig(LOGGING)
@@ -23,6 +23,9 @@ class CommonSettings(BaseSettings):
 
 class ApiSettings(CommonSettings):
     """Класс с настройками FastAPI."""
+
+    # Адрес хоста
+    host: str = "http://127.0.0.1:8001"
 
     # Название проекта. Используется в Swagger-документации
     project_name: str
@@ -61,8 +64,8 @@ class SecuritySettings(CommonSettings):
 class YandexAuthSettings(CommonSettings):
     """Класс с настройками Yandex."""
 
-    client_id: str
-    client_secret: str
+    yandex_id: str
+    yandex_secret: str
     auth_url: str
     token_url: str
     revoke_token_url: str
@@ -70,8 +73,24 @@ class YandexAuthSettings(CommonSettings):
     callback_url: str
 
 
+class VkAuthSettings(CommonSettings):
+    """Класс с настройками Google."""
+
+    vk_id: str
+    vk_secret: str
+
+
+class GoogleAuthSettings(CommonSettings):
+    """Класс с настройками Vk."""
+
+    google_id: str
+    google_secret: str
+
+
 api_settings = ApiSettings()  # type: ignore
 postgres_settings = PostgresSettings()  # type: ignore
 redis_settings = RedisSettings()  # type: ignore
 security_settings = SecuritySettings()  # type: ignore
 yandex_auth_settings = YandexAuthSettings()  # type: ignore
+google_auth_settings = GoogleAuthSettings()  # type: ignore
+vk_auth_settings = VkAuthSettings()  # type: ignore

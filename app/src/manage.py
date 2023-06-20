@@ -1,6 +1,9 @@
 import typer
 from db.storage.postgres import PostgresStorage
 from security.hasher import Hasher
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 app = typer.Typer()
 
@@ -13,7 +16,7 @@ def createadmin(username: str, password: str):
         raise Exception("Username already exists!")
 
     hashed_password = Hasher.get_password_hash(password=password)
-    user = pg_storage.set_user(
+    user = pg_storage.create_user(
         username=username,
         disabled=False,
         hashed_password=hashed_password,
@@ -40,7 +43,7 @@ def createadmin(username: str, password: str):
 
 @app.command()
 def changeadmin(username: str, password: str):
-    print("Command not implemented yet")
+    logger.warning("Command is not ready yet.")
 
 
 if __name__ == "__main__":

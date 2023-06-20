@@ -25,6 +25,14 @@ class StorageUserProfileModel(BaseModel):
 
 
 class Storage(typing.Protocol):
+    def count(
+        self,
+        model,
+        relations: list[tuple] | None = None,
+        where_conditions: list[tuple] | None = None,
+    ) -> int:
+        ...
+
     def close(self) -> None:
         ...
 
@@ -55,6 +63,12 @@ class UserStorage(typing.Protocol):
     ) -> StorageUserModel:
         ...
 
+    def get_user_by_email(
+        self,
+        email: str,
+    ) -> StorageUserModel:
+        ...
+
     def get_user_roles(
         self,
         username: str,
@@ -68,7 +82,7 @@ class UserStorage(typing.Protocol):
     ):
         ...
 
-    def set_user(
+    def create_user(
         self,
         **kwargs,
     ):
@@ -112,5 +126,7 @@ class UserStorage(typing.Protocol):
         self,
         username: str,
         history_limit: int,
+        offset: int = 0,
+        sort_order: str = 'desc',
     ) -> list[UserHistory]:
         ...

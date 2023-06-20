@@ -1,4 +1,5 @@
 from logging import DEBUG
+from typing import Any
 from uuid import UUID
 from random import choice
 
@@ -6,7 +7,17 @@ from core.config import postgres_settings as pg_conf
 from core.logger import get_logger
 from db.storage.models import Role, User, UserHistory, UserProfile
 from security.hasher import Hasher
-from sqlalchemy import Row, create_engine, delete, insert, select, update
+from sqlalchemy import (
+    Row,
+    asc,
+    create_engine,
+    delete,
+    desc,
+    func,
+    insert,
+    select,
+    update,
+)
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import literal_column
@@ -50,6 +61,29 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
+    def get_user_by_email(self, email: str) -> User:
+        """
+        Fetch User class instance, build on retieved data from DB
+
+        Args:
+            email: email of user
+
+        Returns:
+            User class instance
+        """
+        stmt = select(User).where(
+            User.email == email,  # type: ignore
+            User.partition_char_num == ord(email[0]),  # type: ignore
+            User.disabled == False,  # type: ignore
+        )
+        try:
+            return self.session.execute(stmt).one()[0]
+        except Exception:
+            self.session.rollback()
+            raise Exception
+        finally:
+            self.session.commit()
+
     def get_user_roles(self, username: str) -> list[Role]:
         """
         Get roles for specified user.
@@ -65,9 +99,9 @@ class PostgresStorage:
             .join(UserProfile, Role.id == UserProfile.role_id)  # type: ignore
             .join(User, User.id == UserProfile.user_id)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0]),
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
         )
         try:
             roles = self.session.execute(stmt).all()
@@ -93,9 +127,9 @@ class PostgresStorage:
         stmt = (
             update(User)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0]),
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
             .values(hashed_password=h_password)
         )
         try:
@@ -106,7 +140,7 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
-    def set_user(self, **kwargs) -> None:
+    def create_user(self, **kwargs) -> None:
         """
         Create user with any valid params.
 
@@ -140,10 +174,13 @@ class PostgresStorage:
         """
         kwargs["partition_char_num"] = ord(username[0])
         stmt = (
-                update(User)
-                .where(User.username == username, User.partition_char_num == ord(username[0]))
-                .values(kwargs)
+            update(User)
+            .where(
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
             )
+            .values(kwargs)
+        )
         try:
             self.session.execute(stmt)
         except Exception:
@@ -154,7 +191,7 @@ class PostgresStorage:
 
     def user_exists(self, username: str) -> bool:
         """
-        Check whether specified user exists
+        Check whether specified user exists.
 
         Args:
             username: name of specified user
@@ -163,10 +200,10 @@ class PostgresStorage:
             bool user existence flag
         """
         stmt = select(
-            exists(1).where(
-                        User.username == username,
-                        User.partition_char_num == ord(username[0])
-                    )
+            exists(1).where(  # type: ignore
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
         )  # type: ignore
         try:
             is_exists = self.session.execute(stmt).fetchone()[  # type: ignore
@@ -204,7 +241,11 @@ class PostgresStorage:
         return user
 
     def get_user_history(
-        self, username: str, history_limit: int
+        self,
+        username: str,
+        history_limit: int,
+        offset: int = 0,
+        sort_order: str = "desc",
     ) -> list[UserHistory]:
         """
         Get specified user's history.
@@ -216,26 +257,57 @@ class PostgresStorage:
         Returns:
             list of UserHistory class instances
         """
+        sort_func = desc if sort_order.lower() == "desc" else asc
+
         stmt = (
             select(UserHistory)
             .join(User, UserHistory.user_id == User.id)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0])
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
+            .order_by(sort_func(UserHistory.created))
             .limit(history_limit)
+            .offset(offset)
         )
 
         return [row.UserHistory for row in self.session.execute(stmt).all()]
+
+    def count(
+        self,
+        model,
+        relations: list[tuple] | None = None,
+        where_conditions: list[tuple] | None = None,
+    ) -> int:
+        stmt = select(func.count()).select_from(model)
+
+        if relations:
+            for relation in relations:
+                stmt = stmt.join(*relation)
+
+        if where_conditions:
+            where_clauses = [condition for condition in where_conditions]
+            stmt = stmt.where(*where_clauses)  # type: ignore
+
+        logger.debug(
+            "SQL QUERY: \n%s",
+            stmt.compile(compile_kwargs={"literal_binds": True}).string,
+        )
+
+        count = self.session.execute(stmt).scalar()
+
+        if not count:
+            raise ValueError("Count must be int")
+        return count
 
     def update_user_password(self, username: str, password: str):
         hashed_password = Hasher.get_password_hash(password=password)
         stmt = (
             update(User)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0])
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
             .values(hashed_password=hashed_password)
         )
         """
@@ -270,18 +342,16 @@ class PostgresStorage:
         event_desc_col = literal_column("'{0}'".format(event_desc)).label(
             "user_event"
         )  # type: ignore
-        device_type = choice(['smart', 'mobile', 'web'])
+        device_type = choice(["smart", "mobile", "web"])
         event_device_col = literal_column("'{0}'".format(device_type)).label(
             "device_type"
         )  # type: ignore
         select_stmt = select(
-                                User.id.label("user_id"),
-                                event_desc_col,
-                                event_device_col
-                        ).where(
-                            User.username == username,
-                            User.partition_char_num == ord(username[0])
-                            )
+            User.id.label("user_id"), event_desc_col, event_device_col
+        ).where(
+            User.username == username,
+            User.partition_char_num == ord(username[0]),
+        )
         insert_stmt = insert(UserHistory).from_select(
             ["user_id", "user_event", "device_type"], select_stmt
         )

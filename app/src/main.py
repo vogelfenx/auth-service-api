@@ -1,9 +1,8 @@
 from contextlib import asynccontextmanager
 
-from api.v2.auth.default.routes import router as default_auth_v2
-from api.v2.auth.yandex.routes import router as yandex_auth_v2
 from api.v1.auth.routes import router as auth_v1
 from api.v1.role.routes import router as role_v1
+from api.v2.auth.routes import router as auth_v2
 from core.config import api_settings, security_settings
 from db.cache import dependency as cache_dependency
 from db.cache.redis import RedisCache
@@ -13,7 +12,6 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware import Middleware
 
 
 @asynccontextmanager
@@ -28,54 +26,16 @@ async def lifespan(app: FastAPI):
         await cache_dependency.cache.close()
 
 
-origins = [
-    "https://*.yandex.ru",
-    "https://oauth.yandex.ru/authorize",
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:80",
-    "http://127.0.0.1",
-    "http://localhost:8000",
-    "http://localhost:80",
-    "http://localhost",
-]
-
-
-middleware = [
-    Middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_methods=[
-            "GET",
-            "POST",
-            "OPTIONS",
-        ],
-        allow_headers=[
-            "*",
-            "Authorization",
-            "Content-Type",
-            "Origin",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Request-Headers",
-        ],
-        expose_headers=["*"],
-    ),
-    Middleware(
-        SessionMiddleware,
-        secret_key=security_settings.secret_key,
-        max_age=60 * 60 * 24 * 7,
-    ),
-]
-
-
+# init app
 app = FastAPI(
-    title=api_settings.project_name,
     docs_url="/api/openapi",
     openapi_url="/api/openapi.json",
     default_response_class=ORJSONResponse,
-    lifespan=lifespan,
-    middleware=middleware,
+    title=api_settings.project_name,  # type: ignore
+    lifespan=lifespan,  # type: ignore
 )
 
+# middlewares
 origins = [
     "*",
 ]
@@ -88,6 +48,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=security_settings.secret_key,
+    max_age=60 * 60 * 24 * 7,
+)
+
+# routers
 app.include_router(
     role_v1,
     prefix="/api/v1/role",
@@ -101,14 +68,8 @@ app.include_router(
     responses={404: {"description": "Not found"}},
 )
 app.include_router(
-    default_auth_v2,
-    prefix="/api/v2/auth/default",
-    tags=["auth-default-v2"],
-    responses={404: {"description": "Not found"}},
-)
-app.include_router(
-    yandex_auth_v2,
-    prefix="/api/v2/auth/yandex",
-    tags=["auth-yandex-v2"],
+    auth_v2,
+    prefix="/api/v2/auth",
+    tags=["auth-v2"],
     responses={404: {"description": "Not found"}},
 )

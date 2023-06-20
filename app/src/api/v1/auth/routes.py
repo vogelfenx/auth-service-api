@@ -48,7 +48,7 @@ async def signup(
 
     psw: str = user.password.get_secret_value()
     hashed_password = Hasher.get_password_hash(password=psw)
-    storage.set_user(
+    storage.create_user(
         **user.dict(exclude={"password"}),
         hashed_password=hashed_password,
     )
@@ -334,7 +334,8 @@ async def refresh(
     response: Response,
     current_refresh_token: Annotated[
         str | None,
-        Body(description="refresh_token")] = None,
+        Body(description="refresh_token"),
+    ] = "",
     storage: UserStorage = Depends(get_storage),
 ):
     """Refresh access & refresh tokens using current refresh token.
@@ -345,7 +346,8 @@ async def refresh(
     if not current_refresh_token:
         current_refresh_token = request.cookies.get("refresh_token")
         _, current_refresh_token = get_authorization_scheme_param(
-            current_refresh_token)
+            current_refresh_token,
+        )
 
     if not current_refresh_token:
         raise HTTPException(
@@ -360,7 +362,9 @@ async def refresh(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if await is_token_invalidated(current_refresh_token, token_name="refresh_token"):
+    if await is_token_invalidated(
+        current_refresh_token, token_name="refresh_token"
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalidated",
@@ -371,7 +375,7 @@ async def refresh(
     token_data = TokenData.parse_obj(payload)
     current_user = storage.get_user(username=token_data.username)
     _roles = storage.get_user_roles(username=token_data.username)
-    roles = [role.role for role in _roles if not role.disabled]
+    roles = [role.role for role in _roles if not role.disabled]  # type: ignore
 
     access_token_expires = timedelta(
         minutes=security_settings.access_token_expire_minutes,

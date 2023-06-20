@@ -10,13 +10,17 @@ class CreateRole(BaseModel):
 
     role: Annotated[str, Query(description="Role name")]
     description: Annotated[
-        str | None, Query(
+        str | None,
+        Query(
             description="Role description",
-        )] = None
+        ),
+    ] = None
     disabled: Annotated[
-        bool, Query(
+        bool,
+        Query(
             description="Is Role disabled flag",
-        )] = False
+        ),
+    ] = False
 
 
 class ResponseRole(BaseModel):
@@ -25,13 +29,17 @@ class ResponseRole(BaseModel):
     id: UUID
     role: Annotated[str, Query(description="Role name")]
     description: Annotated[
-        str | None, Query(
+        str | None,
+        Query(
             description="Role description",
-        )] = None
+        ),
+    ] = None
     disabled: Annotated[
-        bool, Query(
+        bool,
+        Query(
             description="Is Role disabled flag",
-        )] = False
+        ),
+    ] = False
 
 
 class UserRole(BaseModel):
@@ -39,6 +47,8 @@ class UserRole(BaseModel):
 
     role_id: Annotated[UUID, Query(description="Role's ID to be assigned")]
     user_ud: Annotated[
-        UUID, Query(
+        UUID,
+        Query(
             description="User's ID qualified for the role",
-        )]
+        ),
+    ]
