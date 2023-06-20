@@ -11,10 +11,10 @@ RUN python -m venv /opt/.venv
 # Enable venv
 ENV PATH="/opt/.venv/bin:$PATH"
 
-COPY requirements.txt requirements.txt
-
 RUN apt-get update && \
     apt-get install -y netcat-traditional
+
+COPY requirements.txt requirements.txt
 
 RUN  pip install --upgrade pip \
      && pip install -r requirements.txt --no-cache-dir

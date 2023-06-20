@@ -50,6 +50,29 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
+    def get_user_by_email(self, email: str) -> User:
+        """
+        Fetch User class instance, build on retieved data from DB
+
+        Args:
+            email: email of user
+
+        Returns:
+            User class instance
+        """
+        stmt = select(User).where(
+            User.email == email,  # type: ignore
+            User.partition_char_num == ord(email[0]),  # type: ignore
+            User.disabled == False,  # type: ignore
+        )
+        try:
+            return self.session.execute(stmt).one()[0]
+        except Exception:
+            self.session.rollback()
+            raise Exception
+        finally:
+            self.session.commit()
+
     def get_user_roles(self, username: str) -> list[Role]:
         """
         Get roles for specified user.
@@ -65,9 +88,9 @@ class PostgresStorage:
             .join(UserProfile, Role.id == UserProfile.role_id)  # type: ignore
             .join(User, User.id == UserProfile.user_id)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0]),
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
         )
         try:
             roles = self.session.execute(stmt).all()
@@ -93,9 +116,9 @@ class PostgresStorage:
         stmt = (
             update(User)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0]),
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
             .values(hashed_password=h_password)
         )
         try:
@@ -140,10 +163,13 @@ class PostgresStorage:
         """
         kwargs["partition_char_num"] = ord(username[0])
         stmt = (
-                update(User)
-                .where(User.username == username, User.partition_char_num == ord(username[0]))
-                .values(kwargs)
+            update(User)
+            .where(
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
             )
+            .values(kwargs)
+        )
         try:
             self.session.execute(stmt)
         except Exception:
@@ -164,9 +190,9 @@ class PostgresStorage:
         """
         stmt = select(
             exists(1).where(
-                        User.username == username,
-                        User.partition_char_num == ord(username[0])
-                    )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
         )  # type: ignore
         try:
             is_exists = self.session.execute(stmt).fetchone()[  # type: ignore
@@ -220,9 +246,9 @@ class PostgresStorage:
             select(UserHistory)
             .join(User, UserHistory.user_id == User.id)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0])
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
             .limit(history_limit)
         )
 
@@ -233,9 +259,9 @@ class PostgresStorage:
         stmt = (
             update(User)
             .where(
-                    User.username == username,
-                    User.partition_char_num == ord(username[0])
-                )
+                User.username == username,
+                User.partition_char_num == ord(username[0]),
+            )
             .values(hashed_password=hashed_password)
         )
         """
@@ -270,18 +296,16 @@ class PostgresStorage:
         event_desc_col = literal_column("'{0}'".format(event_desc)).label(
             "user_event"
         )  # type: ignore
-        device_type = choice(['smart', 'mobile', 'web'])
+        device_type = choice(["smart", "mobile", "web"])
         event_device_col = literal_column("'{0}'".format(device_type)).label(
             "device_type"
         )  # type: ignore
         select_stmt = select(
-                                User.id.label("user_id"),
-                                event_desc_col,
-                                event_device_col
-                        ).where(
-                            User.username == username,
-                            User.partition_char_num == ord(username[0])
-                            )
+            User.id.label("user_id"), event_desc_col, event_device_col
+        ).where(
+            User.username == username,
+            User.partition_char_num == ord(username[0]),
+        )
         insert_stmt = insert(UserHistory).from_select(
             ["user_id", "user_event", "device_type"], select_stmt
         )

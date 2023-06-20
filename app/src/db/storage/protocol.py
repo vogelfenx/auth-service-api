@@ -55,6 +55,12 @@ class UserStorage(typing.Protocol):
     ) -> StorageUserModel:
         ...
 
+    def get_user_by_email(
+        self,
+        email: str,
+    ) -> StorageUserModel:
+        ...
+
     def get_user_roles(
         self,
         username: str,

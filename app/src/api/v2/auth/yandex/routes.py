@@ -14,64 +14,102 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
+    Request,
     Response,
     status,
 )
-from pydantic import BaseModel
 
 from ..models import Tokens, Url
 from .models import UserInfo
-from .security import get_tokens, oauth2_scheme
+
+# from .security import get_tokens, oauth2_scheme
+from .security import oauth
 
 logger = get_logger(__name__)
 logger.setLevel(level="DEBUG")
 router = APIRouter()
 
-
-@router.get(
-    "/example", summary="Step 1: Client recieves a login url and redirects."
-)
-async def example(example=Depends(oauth2_scheme)):
-    pass
+from starlette.requests import Request
 
 
-@router.post(
-    "/example_token",
-    summary="Step 2: Exchange a code to tokens.",
-)
-async def example_token(
-    response: Response,
-    body=Body(),
-):
-    pass
-
-
-@router.get(
-    "/login", summary="Step 1: Client recieves a login url and redirects."
-)
-async def get_login_url(
-    redirect_uri: Annotated[
-        str, Query(description="Callback uri.")
-    ] = yandex_auth_settings.callback_url,
-) -> Url:
-    """
-    Get login url which will redirect user to Yandex Authorization Page.
-    Use it on a client side.
-    """
-
-    params = {
-        "response_type": "code",
-        "client_id": yandex_auth_settings.client_id,
-        "redirect_uri": redirect_uri,
-        "state": str(uuid4()),
-    }
-
-    return Url(
-        url="{0}?{1}".format(
-            yandex_auth_settings.auth_url,
-            urlencode(params),
+@router.get("/login")
+async def login_via_yandex(request: Request):
+    redirect_uri = request.url_for("auth_via_yandex")
+    if not oauth.yandex:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The oauth.yandex must be specified.",
         )
-    )
+
+    return await oauth.yandex.authorize_redirect(request, str(redirect_uri))
+
+
+@router.get("/auth")
+async def auth_via_yandex(request: Request):
+    if not oauth.yandex:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="The oauth.yandex must be specified.",
+        )
+    token = await oauth.yandex.authorize_access_token(request)
+    user = token["userinfo"]
+    return dict(user)
+
+    # """Endoint accepts code and return accept and refresh tokens."""
+
+    # data = {
+    #     "code": code,
+    #     "grant_type": "authorization_code",
+    #     "client_id": yandex_auth_settings.yandex_id,
+    #     "client_secret": yandex_auth_settings.yandex_secret,
+    # }
+
+    # ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+    # # FIXME использовать сертификат
+    # async with aiohttp.ClientSession() as session:
+    #     async with session.post(
+    #         yandex_auth_settings.token_url,
+    #         data=data,
+    #         ssl=False,
+    #     ) as yandex_response:
+    #         tokens_json = await yandex_response.json()
+    #         if yandex_response.status != status.HTTP_200_OK:
+    #             raise HTTPException(
+    #                 status_code=yandex_response.status,
+    #                 detail=tokens_json,
+    #             )
+
+    #         tokens = Tokens.parse_obj(tokens_json)
+    # return tokens
+
+
+# @router.get(
+#     "/login", summary="Step 1: Client recieves a login url and redirects."
+# )
+# async def get_login_url(
+#     redirect_uri: Annotated[
+#         str, Query(description="Callback uri.")
+#     ] = yandex_auth_settings.callback_url,
+# ) -> Url:
+#     """
+#     Get login url which will redirect user to Yandex Authorization Page.
+#     Use it on a client side.
+#     """
+
+#     params = {
+#         "response_type": "code",
+#         "client_id": yandex_auth_settings.client_id,
+#         "redirect_uri": redirect_uri,
+#         "state": str(uuid4()),
+#     }
+
+#     return Url(
+#         url="{0}?{1}".format(
+#             yandex_auth_settings.auth_url,
+#             urlencode(params),
+#         )
+#     )
 
 
 @router.post(
@@ -86,10 +124,10 @@ async def token(
     ] = "authorization_code",
     client_id: Annotated[
         str, Query(description="Client identity")
-    ] = yandex_auth_settings.client_id,
+    ] = yandex_auth_settings.yandex_id,
     client_secret: Annotated[
         str, Query(description="Client secret")
-    ] = yandex_auth_settings.client_secret,
+    ] = yandex_auth_settings.yandex_secret,
     device_id: Annotated[
         str | None, Query(description="Device identity")
     ] = None,
@@ -147,85 +185,84 @@ async def token(
     return tokens
 
 
-@router.get(
-    "/user/info",
-    response_model=UserInfo,
-    summary="Get current user information from Yandex.",
-)
-async def get_user_info(
-    url: Annotated[
-        str, Query(description="User info url")
-    ] = yandex_auth_settings.user_url,
-    tokens: Tokens = Depends(get_tokens),
-):
-    # access_token = decode_token(
-    #     token=tokens.access_token,
-    #     key=yandex_auth_settings.client_secret,
-    #     algorithms=[security_settings.algorithm],
-    # )
-    token = tokens.access_token.split()[1]
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url,
-            headers={
-                "Authorization": "OAuth {0}".format(token),
-            },
-            ssl=False,
-        ) as yandex_response:
-            _json = await yandex_response.json()
-            if yandex_response.status != status.HTTP_200_OK:
-                raise HTTPException(
-                    status_code=yandex_response.status,
-                    detail=_json,
-                )
+# @router.get(
+#     "/user/info",
+#     response_model=UserInfo,
+#     summary="Get current user information from Yandex.",
+# )
+# async def get_user_info(
+#     request: Request,
+#     token=Depends(oauth2_scheme),
+# ):
+#     # access_token = decode_token(
+#     #     token=tokens.access_token,
+#     #     key=yandex_auth_settings.client_secret,
+#     #     algorithms=[security_settings.algorithm],
+#     # )
+#     # token = tokens.access_token.split()[1]
 
-            user_info = UserInfo.parse_obj(_json)
+#     async with aiohttp.ClientSession() as session:
+#         async with session.post(
+#             yandex_auth_settings.user_url,
+#             headers={
+#                 "Authorization": "OAuth {0}".format(token),
+#             },
+#             ssl=False,
+#         ) as yandex_response:
+#             _json = await yandex_response.json()
+#             if yandex_response.status != status.HTTP_200_OK:
+#                 raise HTTPException(
+#                     status_code=yandex_response.status,
+#                     detail=_json,
+#                 )
 
-    return user_info
+#             user_info = UserInfo.parse_obj(_json)
+
+#     return user_info
 
 
-@router.get(
-    "/revoke_token",
-    summary="Revoke current access token.",
-)
-async def revoke_token(
-    url: Annotated[
-        str, Query(description="Revoke token url")
-    ] = yandex_auth_settings.revoke_token_url,
-    tokens: Tokens = Depends(get_tokens),
-):
-    token = tokens.access_token.split()[1]
-    _secret = "{0}:{1}".format(
-        yandex_auth_settings.client_id,
-        yandex_auth_settings.client_secret,
-    )
-    authorization = base64.b64encode(bytes(_secret, "utf-8"))
+# @router.get(
+#     "/revoke_token",
+#     summary="Revoke current access token.",
+# )
+# async def revoke_token(
+#     url: Annotated[
+#         str, Query(description="Revoke token url")
+#     ] = yandex_auth_settings.revoke_token_url,
+#     tokens: Tokens = Depends(get_tokens),
+# ):
+#     token = tokens.access_token.split()[1]
+#     _secret = "{0}:{1}".format(
+#         yandex_auth_settings.client_id,
+#         yandex_auth_settings.client_secret,
+#     )
+#     authorization = base64.b64encode(bytes(_secret, "utf-8"))
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            url,
-            data={
-                "access_token": token,
-            },
-            headers={
-                "Content-type": "application/x-www-form-urlencoded",
-                "Authorization": "Basic {0}".format(
-                    str(authorization, "utf-8")
-                ),
-            },
-            ssl=False,
-        ) as yandex_response:
-            _json = await yandex_response.json()
-            if (
-                yandex_response.status == status.HTTP_400_BAD_REQUEST
-                and _json["error"] == "unsupported_token_type"
-            ):
-                # TODO clear token from local storage
-                pass
-            elif yandex_response.status != status.HTTP_200_OK:
-                raise HTTPException(
-                    status_code=yandex_response.status,
-                    detail=_json,
-                )
+#     async with aiohttp.ClientSession() as session:
+#         async with session.post(
+#             url,
+#             data={
+#                 "access_token": token,
+#             },
+#             headers={
+#                 "Content-type": "application/x-www-form-urlencoded",
+#                 "Authorization": "Basic {0}".format(
+#                     str(authorization, "utf-8")
+#                 ),
+#             },
+#             ssl=False,
+#         ) as yandex_response:
+#             _json = await yandex_response.json()
+#             if (
+#                 yandex_response.status == status.HTTP_400_BAD_REQUEST
+#                 and _json["error"] == "unsupported_token_type"
+#             ):
+#                 # TODO clear token from local storage
+#                 pass
+#             elif yandex_response.status != status.HTTP_200_OK:
+#                 raise HTTPException(
+#                     status_code=yandex_response.status,
+#                     detail=_json,
+#                 )
 
-    return _json
+#     return _json
