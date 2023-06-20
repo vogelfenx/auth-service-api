@@ -2,7 +2,7 @@
 from core.config import google_auth_settings, vk_auth_settings
 
 from authlib.integrations.starlette_client import OAuth
-from loginpass import Google, VK
+from loginpass import Google as Google, VK
 from enum import Enum
 
 
