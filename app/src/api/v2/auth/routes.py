@@ -35,7 +35,8 @@ async def login_via_google(
 ):
     """
     This endoint works as redirector from client site to authorization page.
-
+    Also it does not work throw OpenApi - you can just put this url in the browser page.
+    After that, session will set access and refresh tokens in the cookies.
     NOTE: Use google. Yandex and Vk providers are instable (we keep it here for feature dev).
     """
     redirect_uri = str(

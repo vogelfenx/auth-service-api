@@ -1,6 +1,9 @@
 import typer
 from db.storage.postgres import PostgresStorage
 from security.hasher import Hasher
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 app = typer.Typer()
 
@@ -40,6 +43,8 @@ def createadmin(username: str, password: str):
 
 @app.command()
 def changeadmin(username: str, password: str):
+    logger.warning("Command is not ready yet.")
+
 
 if __name__ == "__main__":
     pg_storage = PostgresStorage()
