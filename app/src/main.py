@@ -2,8 +2,7 @@ from contextlib import asynccontextmanager
 
 from api.v1.auth.routes import router as auth_v1
 from api.v1.role.routes import router as role_v1
-from api.v2.auth.default.routes import router as default_auth_v2
-from api.v2.auth.google.routes import router as google_auth_v2
+from api.v2.auth.provider.routes import router as google_auth_v2
 from api.v2.auth.yandex.routes import router as yandex_auth_v2
 from core.config import api_settings, security_settings
 from db.cache import dependency as cache_dependency
@@ -28,14 +27,16 @@ async def lifespan(app: FastAPI):
         await cache_dependency.cache.close()
 
 
+# init app
 app = FastAPI(
-    title=api_settings.project_name,
     docs_url="/api/openapi",
     openapi_url="/api/openapi.json",
     default_response_class=ORJSONResponse,
-    lifespan=lifespan,
+    title=api_settings.project_name,  # type: ignore
+    lifespan=lifespan,  # type: ignore
 )
 
+# middlewares
 origins = [
     "*",
 ]
@@ -53,6 +54,8 @@ app.add_middleware(
     secret_key=security_settings.secret_key,
     max_age=60 * 60 * 24 * 7,
 )
+
+# routers
 app.include_router(
     role_v1,
     prefix="/api/v1/role",
@@ -63,12 +66,6 @@ app.include_router(
     auth_v1,
     prefix="/api/v1/auth",
     tags=["auth-v1"],
-    responses={404: {"description": "Not found"}},
-)
-app.include_router(
-    default_auth_v2,
-    prefix="/api/v2/auth/default",
-    tags=["auth-default-v2"],
     responses={404: {"description": "Not found"}},
 )
 app.include_router(
