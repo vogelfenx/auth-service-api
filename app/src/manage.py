@@ -40,8 +40,6 @@ def createadmin(username: str, password: str):
 
 @app.command()
 def changeadmin(username: str, password: str):
-    print("Command not implemented yet")
-
 
 if __name__ == "__main__":
     pg_storage = PostgresStorage()
