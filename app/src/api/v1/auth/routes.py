@@ -48,7 +48,7 @@ async def signup(
 
     psw: str = user.password.get_secret_value()
     hashed_password = Hasher.get_password_hash(password=psw)
-    storage.set_user(
+    storage.create_user(
         **user.dict(exclude={"password"}),
         hashed_password=hashed_password,
     )

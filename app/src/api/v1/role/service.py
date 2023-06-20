@@ -30,11 +30,11 @@ class RoleService:
         """Edit a role by id."""
         self.storage.edit_role(id=role_id, **role.dict())
 
-    def fetch_roles(self) -> list[CreateRole]:
+    def fetch_roles(self) -> list[ResponseRole]:
         """Fetch all roles from a source."""
         roles = self.storage.fetch_roles()
         roles = [ResponseRole(**role.__dict__) for role in roles]
-        return roles  # type: ignore
+        return roles
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserRole:
         """Assign a role to an user."""

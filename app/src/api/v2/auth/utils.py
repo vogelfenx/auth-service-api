@@ -30,7 +30,7 @@ def assign(
         )
     else:
         logger.info("Creating new user with email <%s>", email)
-        storage.set_user(
+        storage.create_user(
             username=email,  # we use email as username
             email=email,
             full_name=user["name"],
