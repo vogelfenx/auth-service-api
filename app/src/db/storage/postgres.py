@@ -129,7 +129,7 @@ class PostgresStorage:
         finally:
             self.session.commit()
 
-    def set_user(self, **kwargs) -> None:
+    def create_user(self, **kwargs) -> None:
         """
         Create user with any valid params.
 
@@ -180,7 +180,7 @@ class PostgresStorage:
 
     def user_exists(self, username: str) -> bool:
         """
-        Check whether specified user exists
+        Check whether specified user exists.
 
         Args:
             username: name of specified user
@@ -189,7 +189,7 @@ class PostgresStorage:
             bool user existence flag
         """
         stmt = select(
-            exists(1).where(
+            exists(1).where(  # type: ignore
                 User.username == username,
                 User.partition_char_num == ord(username[0]),
             )

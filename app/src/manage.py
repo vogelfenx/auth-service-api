@@ -13,7 +13,7 @@ def createadmin(username: str, password: str):
         raise Exception("Username already exists!")
 
     hashed_password = Hasher.get_password_hash(password=password)
-    user = pg_storage.set_user(
+    user = pg_storage.create_user(
         username=username,
         disabled=False,
         hashed_password=hashed_password,

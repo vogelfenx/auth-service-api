@@ -74,7 +74,7 @@ class UserStorage(typing.Protocol):
     ):
         ...
 
-    def set_user(
+    def create_user(
         self,
         **kwargs,
     ):
