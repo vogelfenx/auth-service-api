@@ -333,8 +333,9 @@ async def refresh(
     request: Request,
     response: Response,
     current_refresh_token: Annotated[
-        str | None, Body(description="refresh_token")
-    ] = None,
+        str | None,
+        Body(description="refresh_token"),
+    ] = "",
     storage: UserStorage = Depends(get_storage),
 ):
     """Refresh access & refresh tokens using current refresh token.
@@ -345,7 +346,7 @@ async def refresh(
     if not current_refresh_token:
         current_refresh_token = request.cookies.get("refresh_token")
         _, current_refresh_token = get_authorization_scheme_param(
-            current_refresh_token
+            current_refresh_token,
         )
 
     if not current_refresh_token:
