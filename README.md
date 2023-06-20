@@ -24,7 +24,7 @@ Authentication Service repository
 7. Для создания супер-пользователя с ролью `admin`, использовать следующую комманду (выполнять нужно в контейнере).
 
    ```bash
-   python manage.py createadmin
+   docker exec auth_api_service python src/manage.py createadmin su su
    ```
 
 8. Работу шаблона можно проверить по http://127.0.0.1:8000/api/openapi#/
