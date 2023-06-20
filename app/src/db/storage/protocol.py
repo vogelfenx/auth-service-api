@@ -25,6 +25,14 @@ class StorageUserProfileModel(BaseModel):
 
 
 class Storage(typing.Protocol):
+    def count(
+        self,
+        model,
+        relations: list[tuple] | None = None,
+        where_conditions: list[tuple] | None = None,
+    ) -> int:
+        ...
+
     def close(self) -> None:
         ...
 
@@ -112,5 +120,7 @@ class UserStorage(typing.Protocol):
         self,
         username: str,
         history_limit: int,
+        offset: int = 0,
+        sort_order: str = 'desc',
     ) -> list[UserHistory]:
         ...

@@ -1,32 +1,32 @@
 from datetime import timedelta
 from typing import Annotated
 
+from fastapi import (APIRouter, Depends, HTTPException, Query, Request,
+                     Response, status)
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security.utils import get_authorization_scheme_param
+
+from api.common.models import pagination_parameters
+from api.v2.auth.default.models import ResponseUserLoginHistory
 from core.config import security_settings
 from core.logger import get_logger
 from db.storage.dependency import get_storage
+from db.storage.models import UserHistory
 from db.storage.protocol import UserStorage
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-    Request,
-    Response,
-    status,
-)
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.security.utils import get_authorization_scheme_param
 from security.hasher import Hasher
 from security.models import TokenData
 from security.token import create_token, decode_token
+from api.v2.auth.default.models import ResponseUserLoginHistoryEntry
+from db.storage.models import User
 
+from ..deps import CurrentUserAnnotated
 from ..models import ResponseUser, Tokens, UserAnnotated
 from ..service import invalidate_token, is_token_invalidated
-from ..deps import CurrentUserAnnotated
 
-logger = get_logger(__name__)
-logger.setLevel(level="DEBUG")
+logger = get_logger(__name__, level="DEBUG")
 router = APIRouter()
+
+PaginationParameters = Annotated[dict, Depends(pagination_parameters)]
 
 
 @router.post(
@@ -302,9 +302,16 @@ async def edit_common_user_info(
 )
 async def get_user_history(
     current_user: CurrentUserAnnotated,
-    limit: Annotated[int, Query(description="User history limit")],
+    pagination_params: PaginationParameters,
+    sort: Annotated[
+        str | None,
+        Query(
+            description="desc or asc sorting",
+            regex="^desc$|^asc$",
+        ),
+    ] = "desc",
     storage: UserStorage = Depends(get_storage),
-):
+) -> ResponseUserLoginHistory:
     """
     Get user login history
 
@@ -316,10 +323,37 @@ async def get_user_history(
     Returns:
         List of UserHistory class instances
     """
+    page_number = pagination_params["page_number"]
+    page_size = pagination_params["page_size"]
 
-    return storage.get_user_history(
+    # if not 'asc' or 'desc' in sort:
+
+    login_history = storage.get_user_history(
         username=current_user.username,
-        history_limit=limit,
+        history_limit=page_size,
+        offset=page_number,
+        sort_order=sort,
+    )
+
+    total_login_count = storage.count(
+        model=UserHistory,
+        relations=[(User, UserHistory.user_id == User.id)],
+        where_conditions=[
+            (User.username == current_user.username),
+            (UserHistory.user_event == "Token issuance"),
+        ],
+    )
+
+    login_history = [
+        ResponseUserLoginHistoryEntry(created=login.created)
+        for login in login_history
+    ]
+
+    return ResponseUserLoginHistory(
+        page_size=page_size,
+        page_number=page_number,
+        login_history=login_history,
+        total_login_count=total_login_count,
     )
 
 
