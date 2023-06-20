@@ -33,6 +33,11 @@ async def login_via_google(
     provider: Annotated[Provider, Path(description="A social provider.")],
     request: Request,
 ):
+    """
+    This endoint works as redirector from client site to authorization page.
+
+    NOTE: Yandex and Vk providers are instable. Use google.
+    """
     redirect_uri = str(
         request.url_for(
             "auth_via_provider",
@@ -60,6 +65,13 @@ async def auth_via_provider(
     response: Response,
     storage: UserStorage = Depends(get_storage),
 ):
+    """
+    Take a code from authorization page and assign to user.
+    Set access and refresh tokens (local tokens).
+
+    Return:
+        Token: access and refresh tokens.
+    """
     current_provider = getattr(oauth, provider.value)
 
     if not current_provider:

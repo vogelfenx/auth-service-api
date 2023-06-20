@@ -15,6 +15,7 @@ class Provider(str, Enum):
 
     google = "google"
     vk = "vk"
+    yandex = "yandex"
 
 
 oauth = OAuth()
