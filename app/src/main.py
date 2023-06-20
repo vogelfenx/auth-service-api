@@ -2,8 +2,7 @@ from contextlib import asynccontextmanager
 
 from api.v1.auth.routes import router as auth_v1
 from api.v1.role.routes import router as role_v1
-from api.v2.auth.provider.routes import router as google_auth_v2
-from api.v2.auth.yandex.routes import router as yandex_auth_v2
+from api.v2.auth.routes import router as auth_v2
 from core.config import api_settings, security_settings
 from db.cache import dependency as cache_dependency
 from db.cache.redis import RedisCache
@@ -69,13 +68,7 @@ app.include_router(
     responses={404: {"description": "Not found"}},
 )
 app.include_router(
-    yandex_auth_v2,
-    prefix="/api/v2/auth/yandex",
-    tags=["auth-yandex-v2"],
-    responses={404: {"description": "Not found"}},
-)
-app.include_router(
-    google_auth_v2,
+    auth_v2,
     prefix="/api/v2/auth",
     tags=["auth-v2"],
     responses={404: {"description": "Not found"}},

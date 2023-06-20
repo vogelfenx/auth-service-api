@@ -19,8 +19,8 @@ class RoleService:
 
     def create_role(self, role: CreateRole) -> StorageRoleModel:
         """Create a new role."""
-        role = self.storage.create_role(**role.dict())
-        return role
+        role = self.storage.create_role(**role.dict())  # type: ignore
+        return role  # type: ignore
 
     def delete_role_by_id(self, role_id: UUID) -> None:
         """Delete a role by id."""
@@ -34,7 +34,7 @@ class RoleService:
         """Fetch all roles from a source."""
         roles = self.storage.fetch_roles()
         roles = [ResponseRole(**role.__dict__) for role in roles]
-        return roles
+        return roles  # type: ignore
 
     def assign_role_to_user(self, user_id: UUID, role_id: UUID) -> UserRole:
         """Assign a role to an user."""
@@ -42,7 +42,7 @@ class RoleService:
             user_id=user_id,
             role_id=role_id,
         )
-        return user_role
+        return user_role  # type: ignore
 
 
 def get_role_service(
